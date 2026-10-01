@@ -1282,6 +1282,9 @@
       return true;
     }
 
+    const legend = el.closest('fieldset,[role="radiogroup"]')?.querySelector('legend');
+    if (legend && /\*|\brequired\b/i.test(legend.textContent || '')) return true;
+
     const container =
       el.closest(
         '.required,[data-required="true"],.form-group,.field,.question'
@@ -1712,7 +1715,7 @@
       (wanted.includes('bachelor') ? available.find(o => normalize(o.textContent).includes('bachelor')) : undefined);
   }
   function collectReview() {
-    const proposals = [], attention = [], seen = new Set();
+    const proposals = [], attention = [], seen = new Set(), attentionGroups = new Set();
     for (const el of document.querySelectorAll(reviewSelector)) {
       if (!isVisible(el) || el.readOnly || el.getAttribute('aria-disabled') === 'true' ||
         el.closest('#jk-autofill-panel') || ['hidden','submit','button','reset','password'].includes(el.type) && !isCustom(el)) continue;
@@ -1727,7 +1730,13 @@
           attention.push({...item, reason: 'Saved answer is not an available option'});
         } else proposals.push(item);
       } else if (isRequired(el) && !(isChoice(el) && peers(el).some(isChecked))) {
-        attention.push({...item, reason: el.type === 'file' ? 'Choose an upload file' : 'Needs your answer'});
+        const group = el.type === 'radio' ? el.closest('fieldset,[role="radiogroup"],[role="group"]') : null;
+        const groupKey = group || (el.type === 'radio' && el.name ? `${el.form?.id || ''}:${el.name}` : null);
+        if (groupKey && attentionGroups.has(groupKey)) continue;
+        if (groupKey) attentionGroups.add(groupKey);
+        const groupLabel = group?.querySelector('legend')?.textContent?.trim();
+        attention.push({...item, label: (groupLabel || item.label).slice(0, 300),
+          reason: el.type === 'file' ? 'Choose an upload file' : 'Needs your answer'});
       }
     }
     return {proposals, attention};
