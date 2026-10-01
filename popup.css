@@ -1,0 +1,9 @@
+body { width: 300px; padding: 18px; margin: 0; font: 14px/1.5 system-ui, sans-serif; color: #17233b; background: #f7f9fc; }
+h1 { font-size: 21px; margin: 0 0 8px; }
+#site { font-weight: 650; overflow-wrap: anywhere; }
+button { width: 100%; padding: 11px; margin: 5px 0; border: 0; border-radius: 8px; cursor: pointer; font: inherit; }
+#enable { background: #194e9e; color: white; }
+#disable { background: #e6ebf3; color: #17233b; }
+button:disabled { opacity: .45; cursor: default; }
+small { display: block; color: #536078; }
+#status { font-weight: 600; }
