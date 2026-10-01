@@ -82,6 +82,7 @@
     "addressLine2": "",
     "zipCode": "",
     "desiredSalary": "",
+    "expectedDayRate": "",
     "earliestStartDate": "",
     "noticePeriod": "",
     "authorizedToWork": "",
@@ -91,6 +92,12 @@
     "travelPercentage": "",
     "remotePreference": "",
     "employmentType": "",
+    "leadershipPreference": "",
+    "teamInterest": "",
+    "interestedFunctions": "",
+    "technicalSkillAreas": "",
+    "certifications": "",
+    "showreelUrl": "",
     "desiredHoursPerWeek": "",
     "referralSource": "",
     "employeeReferralName": "",
@@ -749,6 +756,21 @@
         /\bexpected salary\b/,
         /\bcompensation expectation\b/
       ]
+    ],
+
+    [
+      () => OPTIONAL.expectedDayRate,
+      [/\bexpected day rate\b/]
+    ],
+
+    [
+      () => OPTIONAL.certifications,
+      [/^current certifications$/, /^list (?:your )?certifications$/]
+    ],
+
+    [
+      () => OPTIONAL.showreelUrl,
+      [/\bshowreel\s*(?:or\s*)?(?:website|url|link)\b/]
     ],
 
     [
@@ -1661,6 +1683,13 @@
       (isChoice(el) ? el.textContent : '') || el.getAttribute('name') || el.id || '';
     return normalize(text.replace(/([a-z])([A-Z])/g, '$1 $2'));
   }
+  function choiceLabelText(el) {
+    const explicit = [...(el.labels || [])].map(label => label.textContent || '').find(Boolean);
+    const labelledBy = (el.getAttribute('aria-labelledby') || '').split(/\s+/)
+      .map(id => document.getElementById(id)?.textContent || '').join(' ');
+    return normalize(explicit || el.getAttribute('aria-label') || labelledBy ||
+      el.closest('label')?.textContent || (el.getAttribute('role') ? el.textContent : ''));
+  }
   function currentAnswer(el) {
     if (isChoice(el)) return isChecked(el);
     if (el.isContentEditable) return !!normalize(el.textContent);
@@ -1697,7 +1726,7 @@
     const choice = directLabel(el);
     const question = normalize([group?.querySelector('legend')?.textContent || '',
       group?.getAttribute('aria-label') || ''].join(' '));
-    const legalTerms = /\b(?:electronic consent|terms and conditions|state disclosures?|dispute resolution (?:program|policy)|arbitration agreement|application agreement)\b/;
+    const legalTerms = /\b(?:electronic consent|terms and conditions|state disclosures?|dispute resolution (?:program|policy)|arbitration agreement|application agreement|privacy notice|consent to the processing of my data)\b/;
     if (choice === 'i understand and agree to the terms outlined above' &&
         /\b(?:omission|misrepresentation|falsification)\b/.test(question)) return true;
     if (legalTerms.test(choice) || /\bi (?:acknowledge|certify) that i (?:have )?(?:read|understand)\b|\bi do not agree and wish to end\b/.test(choice)) return true;
@@ -1717,7 +1746,28 @@
   }
   function workPreferenceAnswer(el) {
     if (!isWorkPreferenceQuestion(el) || !OPTIONAL.employmentType || peers(el).some(isChecked)) return null;
-    return directLabel(el) === normalize(OPTIONAL.employmentType) ? {value: OPTIONAL.employmentType} : null;
+    return choiceLabelText(el) === normalize(OPTIONAL.employmentType) ? {value: OPTIONAL.employmentType} : null;
+  }
+  function configuredChoiceAnswer(el) {
+    if (!isChoice(el)) return undefined;
+    const question = eeoQuestion(el);
+    const rules = [
+      [/\b(?:remote hybrid or onsite preference|work arrangement|work location preference)\b/, OPTIONAL.remotePreference, false],
+      [/\b(?:employment preference|employment type|work preference)\b/, OPTIONAL.employmentType, false],
+      [/\b(?:leadership roles|leadership preference|individual contributor roles)\b/, OPTIONAL.leadershipPreference, false],
+      [/\b(?:what team or area are you most interested in|team or area most interested in)\b/, OPTIONAL.teamInterest, false],
+      [/\b(?:which functions are you interested in working|functions are you interested in working)\b/, OPTIONAL.interestedFunctions, true],
+      [/\b(?:technical or functional skill areas|select your skill areas)\b/, OPTIONAL.technicalSkillAreas, true]
+    ].filter(([pattern]) => pattern.test(question));
+    if (rules.length > 1 || rules.length && isSensitive(question)) return null;
+    if (!rules.length || !String(rules[0][1] || '').trim()) return undefined;
+    const [, saved, multiple] = rules[0];
+    if (multiple && el.type !== 'checkbox' && el.getAttribute('role') !== 'checkbox') return null;
+    if (!multiple && peers(el).some(isChecked)) return null;
+    const choice = choiceLabelText(el);
+    const answers = multiple ? String(saved).split(/\r?\n/).map(line => line.trim()).filter(Boolean) : [String(saved).trim()];
+    const exact = answers.find(answer => normalize(answer) === choice);
+    return exact ? {value: exact} : null;
   }
   function eeoAnswer(el) {
     const question = eeoQuestion(el);
@@ -1732,7 +1782,7 @@
     if (!String(saved || '').trim()) return null;
     if (isChoice(el)) {
       if (peers(el).some(isChecked)) return null;
-      const choice = normalize(directLabel(el));
+      const choice = choiceLabelText(el);
       if (choice !== normalize(saved)) return null;
     }
     return {value: String(saved).trim()};
@@ -1746,6 +1796,8 @@
     // Legal acknowledgements require a fresh, manual decision on each page.
     if (isConsentQuestion(el)) return null;
     if (isWorkPreferenceQuestion(el) && OPTIONAL.employmentType) return workPreferenceAnswer(el);
+    const configuredChoice = configuredChoiceAnswer(el);
+    if (configuredChoice !== undefined) return configuredChoice;
     const eeo = eeoAnswer(el);
     if (eeo) return eeo;
     const learned = findLearnedField(el);
