@@ -544,7 +544,8 @@
       [
         /reference/,
         /manager/,
-        /supervisor/
+        /supervisor/,
+        /\b(?:phone|mobile|telephone|cell)\b/
       ]
     ],
 
@@ -608,7 +609,8 @@
       [
         /\bstreet address\b/,
         /\baddress line 1\b/,
-        /\baddress1\b/
+        /\baddress1\b/,
+        /^address(?: 1)?$/
       ]
     ],
 
@@ -617,6 +619,7 @@
       [
         /\baddress line 2\b/,
         /\baddress2\b/,
+        /^address 2$/,
         /\bapt\b/,
         /\bsuite\b/
       ]
@@ -1666,6 +1669,8 @@
       if (peers(el).some(isChecked)) return null;
       if (isChosenVeteranAnswer(direct)) return {value: OPTIONAL.veteranStatus};
       if (isSensitive(desc)) return null;
+      if (el.type === 'checkbox' && direct === 'mobile number' &&
+          normalize(PROFILE.phoneDeviceType) === 'mobile') return {value: 'Yes'};
       if (!['yes','no'].includes(direct)) return null;
       const rule = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(desc)));
       return rule && normalize(rule[0]()) === direct ? {value: rule[0]()} : null;
