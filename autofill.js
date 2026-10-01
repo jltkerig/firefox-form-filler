@@ -1455,7 +1455,7 @@
   function isMemoryUnsafe(el) {
     if (!el || el.type === 'password' || el.type === 'file' || el.type === 'hidden') return true;
     const desc = `${getDescriptor(el)} ${memoryQuestionText(el)}`;
-    return memoryUnsafeTerms.some(term => desc.includes(term)) ||
+    return isConsentQuestion(el) || memoryUnsafeTerms.some(term => desc.includes(term)) ||
       /\b(?:last|final|ending)\s*(?:4|four)\b/.test(desc);
   }
 
@@ -1674,6 +1674,13 @@
   function isEeoQuestion(el) {
     return /\b(?:hispanic|latino|latina|latinx|race|racial|gender|sex assigned at birth)\b/.test(eeoQuestion(el));
   }
+  function isConsentQuestion(el) {
+    if (!isChoice(el)) return false;
+    const group = el.closest('fieldset,[role="radiogroup"],[role="group"]');
+    const question = normalize([directLabel(el), group?.querySelector('legend')?.textContent || '',
+      group?.getAttribute('aria-label') || ''].join(' '));
+    return /\b(?:i (?:agree|acknowledge|accept|consent|certify|have read)|i do not agree|electronic consent|terms and conditions|state disclosures|dispute resolution program|arbitration agreement)\b/.test(question);
+  }
   function eeoAnswer(el) {
     const question = eeoQuestion(el);
     let saved = '';
@@ -1691,6 +1698,8 @@
   function answerFor(el) {
     const direct = directLabel(el);
     const desc = contextLabel(el);
+    // Legal acknowledgements require a fresh, manual decision on each page.
+    if (isConsentQuestion(el)) return null;
     const eeo = eeoAnswer(el);
     if (eeo) return eeo;
     const learned = findLearnedField(el);
@@ -1709,7 +1718,7 @@
       if (peers(el).some(isChecked)) return null;
       if (isChosenVeteranAnswer(direct)) return {value: OPTIONAL.veteranStatus};
       if (isSensitive(desc)) return null;
-      if (el.type === 'checkbox' && direct === 'mobile number' &&
+      if (el.type === 'checkbox' && /^(?:mobile|cell(?:ular)?)(?: phone)?(?: number)?$/.test(direct) &&
           normalize(PROFILE.phoneDeviceType) === 'mobile') return {value: 'Yes'};
       if (!['yes','no'].includes(direct)) return null;
       const rule = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(desc)));
@@ -1766,7 +1775,7 @@
         if (el instanceof HTMLSelectElement && !matchingOption([...el.options], item)) {
           attention.push({...item, reason: 'Saved answer is not an available option'});
         } else proposals.push(item);
-      } else if ((isRequired(el) || isEeoQuestion(el)) && !(isChoice(el) && peers(el).some(isChecked))) {
+      } else if ((isRequired(el) || isEeoQuestion(el) || isConsentQuestion(el)) && !(isChoice(el) && peers(el).some(isChecked))) {
         const group = el.type === 'radio' ? el.closest('fieldset,[role="radiogroup"],[role="group"]') : null;
         const groupKey = group || (el.type === 'radio' && el.name ? `${el.form?.id || ''}:${el.name}` : null);
         if (groupKey && attentionGroups.has(groupKey)) continue;
