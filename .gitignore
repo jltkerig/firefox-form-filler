@@ -2,11 +2,17 @@
 .env
 .env.*
 *.private.*
+*.personal.*
+AGENTS.md
 profile.json
 profile-*.json
 *-profile.json
+local-profile*
+answers*.json
+*.answers.json
 profiles/
 private/
+personal/
 # Backups and generated packages can contain personal data
 backup/
 backups/
