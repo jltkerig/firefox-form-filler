@@ -1301,6 +1301,12 @@
       return false;
     }
 
+    const controls = [...container.querySelectorAll('input:not([type="hidden"]),textarea,select')];
+    // A shared section may contain several unrelated questions. Its required
+    // marker cannot safely be assigned to every control inside it.
+    if (controls.length > 1 && !(el.type === 'radio' && controls.every(other =>
+      other.type === 'radio' && other.name && other.name === el.name))) return false;
+
     const text =
       (
         container.innerText ||
@@ -1672,21 +1678,31 @@
       isChoice(el) ? '' : directLabel(el)].filter(Boolean).join(' '));
   }
   function isEeoQuestion(el) {
-    return /\b(?:hispanic|latino|latina|latinx|race|racial|gender|sex assigned at birth)\b/.test(eeoQuestion(el));
+    return /\b(?:hispanic|latino|latina|latinx|race|racial|ethnicity|gender|sex assigned at birth)\b/.test(eeoQuestion(el));
   }
   function isConsentQuestion(el) {
     if (!isChoice(el)) return false;
     const group = el.closest('fieldset,[role="radiogroup"],[role="group"]');
-    const question = normalize([directLabel(el), group?.querySelector('legend')?.textContent || '',
+    const choice = directLabel(el);
+    const question = normalize([group?.querySelector('legend')?.textContent || '',
       group?.getAttribute('aria-label') || ''].join(' '));
-    return /\b(?:i (?:agree|acknowledge|accept|consent|certify|have read)|i do not agree|electronic consent|terms and conditions|state disclosures|dispute resolution program|arbitration agreement)\b/.test(question);
+    const legalTerms = /\b(?:electronic consent|terms and conditions|state disclosures?|dispute resolution (?:program|policy)|arbitration agreement|application agreement)\b/;
+    if (legalTerms.test(choice) || /\bi (?:acknowledge|certify) that i (?:have )?(?:read|understand)\b|\bi do not agree and wish to end\b/.test(choice)) return true;
+    if (!/^i (?:agree|accept|consent|acknowledge|certify)$/.test(choice)) return false;
+    if (legalTerms.test(question)) return true;
+    return el.type === 'radio' && peers(el).some(other =>
+      other !== el && /\bi do not agree and wish to end\b/.test(directLabel(other)));
   }
   function eeoAnswer(el) {
     const question = eeoQuestion(el);
-    let saved = '';
-    if (/\b(?:hispanic|latino|latina|latinx)\b/.test(question)) saved = OPTIONAL.eeoHispanicLatino;
-    else if (/\b(?:race|racial)\b/.test(question)) saved = OPTIONAL.eeoRace;
-    else if (/\b(?:gender|sex assigned at birth)\b/.test(question)) saved = OPTIONAL.eeoGender;
+    const categories = [
+      [/\b(?:hispanic|latino|latina|latinx)\b/, OPTIONAL.eeoHispanicLatino],
+      [/\b(?:race|racial)\b/, OPTIONAL.eeoRace],
+      [/\bgender\b/, OPTIONAL.eeoGender]
+    ].filter(([pattern]) => pattern.test(question));
+    if (categories.length !== 1 || /\b(?:gender identity|sex assigned at birth|sexual orientation)\b/.test(question) ||
+        (/\bethnicity\b/.test(question) && !/\b(?:hispanic|latino|latina|latinx)\b/.test(question))) return null;
+    const saved = categories[0][1];
     if (!String(saved || '').trim()) return null;
     if (isChoice(el)) {
       if (peers(el).some(isChecked)) return null;
@@ -1781,8 +1797,11 @@
         if (groupKey && attentionGroups.has(groupKey)) continue;
         if (groupKey) attentionGroups.add(groupKey);
         const groupLabel = group?.querySelector('legend')?.textContent?.trim();
+        const reason = el.type === 'file' ? 'Choose an upload file' : isConsentQuestion(el) ?
+          'Review this agreement manually' : !isRequired(el) && isEeoQuestion(el) ?
+          'Optional self-ID; choose whether to answer' : 'Needs your answer';
         attention.push({...item, label: (groupLabel || item.label).slice(0, 300),
-          reason: el.type === 'file' ? 'Choose an upload file' : 'Needs your answer'});
+          reason});
       }
     }
     return {proposals, attention};
