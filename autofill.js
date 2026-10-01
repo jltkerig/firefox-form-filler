@@ -149,7 +149,8 @@
       .trim();
 
   function isVisible(el) {
-    if (!el || el.disabled || el.type === 'hidden') {
+    if (!el || el.disabled || el.type === 'hidden' || el.matches(':disabled') ||
+        el.closest('[aria-hidden="true"],[aria-disabled="true"],[inert]')) {
       return false;
     }
 
@@ -1276,7 +1277,7 @@
       el.required ||
       el.getAttribute(
         'aria-required'
-      ) === 'true'
+      ) === 'true' || el.matches('.required,.isRequired,[data-required="true"]')
     ) {
       return true;
     }
@@ -1289,8 +1290,17 @@
       return true;
     }
 
-    const legend = el.closest('fieldset,[role="radiogroup"]')?.querySelector('legend');
+    const choiceGroup = el.closest('fieldset,[role="radiogroup"],[role="group"]');
+    const legend = choiceGroup?.querySelector('legend');
     if (legend && /\*|\brequired\b/i.test(legend.textContent || '')) return true;
+    if (choiceGroup?.matches('.required,.isRequired,[aria-required="true"],[data-required="true"]')) {
+      const choices = [...choiceGroup.querySelectorAll('input:not([type="hidden"]),[role="radio"],[role="checkbox"]')];
+      const controls = choiceGroup.querySelectorAll('input:not([type="hidden"]),textarea,select,[role="radio"],[role="checkbox"]');
+      if (choices.length === controls.length && choices.length && choices.every(other => other.type === 'checkbox' ||
+          other.getAttribute('role') === 'checkbox')) return true;
+      if (choices.length === controls.length && choices.length && choices.every(other => (other.type === 'radio' ||
+          other.getAttribute('role') === 'radio') && other.name === el.name)) return true;
+    }
 
     const container =
       el.closest(
@@ -1639,7 +1649,7 @@
     }
     LEARNED_FIELDS = Array.isArray(saved.learnedFields) ? saved.learnedFields : [];
   }
-  const reviewSelector = 'input, textarea, select, [role="combobox"], button[aria-haspopup="listbox"], [role="checkbox"], [role="radio"]';
+  const reviewSelector = 'input, textarea, select, [role="combobox"], button[aria-haspopup="listbox"], [role="checkbox"], [role="radio"], [contenteditable="true"][role="textbox"], [contenteditable="true"][aria-label]';
   const isCustom = el => !(el instanceof HTMLSelectElement) &&
     (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup') === 'listbox');
   const isChoice = el => ['radio','checkbox'].includes(el.type) || ['radio','checkbox'].includes(el.getAttribute('role'));
@@ -1653,6 +1663,7 @@
   }
   function currentAnswer(el) {
     if (isChoice(el)) return isChecked(el);
+    if (el.isContentEditable) return !!normalize(el.textContent);
     if (!isCustom(el)) return hasValue(el);
     const text = normalize(el.value || el.textContent || '');
     return !!text && !/^(?:please )?(?:select|choose|pick|search)(?:\b.*)?$/.test(text);
@@ -1791,26 +1802,65 @@
     return available.find(o => texts(o).some(t => acceptable.includes(t))) ||
       (wanted.includes('bachelor') ? available.find(o => normalize(o.textContent).includes('bachelor')) : undefined);
   }
+  function candidateFits(el, value) {
+    if (el.isContentEditable) return false;
+    if (isChoice(el) || isCustom(el)) return true;
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return true;
+    if (el.type === 'file') return false;
+    const answer = String(value);
+    if (el.maxLength >= 0 && answer.length > el.maxLength) return false;
+    if (el.minLength >= 0 && answer.length < el.minLength) return false;
+    const probe = document.createElement(el instanceof HTMLTextAreaElement ? 'textarea' : 'input');
+    if (el instanceof HTMLInputElement) probe.type = el.type;
+    for (const attribute of ['min', 'max', 'step', 'pattern', 'multiple']) {
+      const setting = el.getAttribute(attribute);
+      if (setting !== null) probe.setAttribute(attribute, setting);
+    }
+    try {
+      probe.value = answer;
+      return probe.value === answer && probe.checkValidity();
+    } catch {
+      return false;
+    }
+  }
+  function sharedCheckboxGroup(el) {
+    if (el.type !== 'checkbox') return null;
+    const group = el.closest('fieldset,[role="group"]');
+    if (!group) return null;
+    const choices = [...group.querySelectorAll('input[type="checkbox"],[role="checkbox"]')];
+    if (choices.length < 2) return null;
+    const legend = normalize(group.querySelector('legend')?.textContent);
+    const availabilityDays = /\bdays and times you are available to work\b/.test(legend);
+    const sharedRequirement = /\brequired\b/.test(legend) || /\*/.test(group.querySelector('legend')?.textContent || '') ||
+      group.matches('[aria-required="true"],[data-required="true"]');
+    const individuallyRequired = choices.some(choice => choice.required ||
+      choice.getAttribute('aria-required') === 'true');
+    return availabilityDays || (sharedRequirement && !individuallyRequired) ? group : null;
+  }
   function collectReview() {
     const proposals = [], attention = [], seen = new Set(), attentionGroups = new Set();
     for (const el of document.querySelectorAll(reviewSelector)) {
       if (!isVisible(el) || el.readOnly || el.getAttribute('aria-disabled') === 'true' ||
-        el.closest('#jk-autofill-panel') || ['hidden','submit','button','reset','password'].includes(el.type) && !isCustom(el)) continue;
+        el.closest('#jk-autofill-panel') || ['hidden','submit','button','reset','password','image'].includes(el.type) && !isCustom(el)) continue;
       if (currentAnswer(el)) continue;
       if (el.closest('[role="combobox"]') && el.closest('[role="combobox"]') !== el) continue;
       if (seen.has(el)) continue;
       seen.add(el);
       const label = getLabelText(el) || el.getAttribute('aria-label') || el.placeholder || el.name || el.id || 'Unlabeled field';
       const item = {el, label: label.trim().slice(0, 300), ...answerFor(el)};
+      const checkboxGroup = sharedCheckboxGroup(el);
+      const choiceAnswered = el.type === 'radio' ? peers(el).some(isChecked) :
+        checkboxGroup ? peers(el).some(isChecked) : isChoice(el) && isChecked(el);
       if (item.value && el.type !== 'file') {
         if (el instanceof HTMLSelectElement && !matchingOption([...el.options], item)) {
           attention.push({...item, reason: 'Saved answer is not an available option'});
+        } else if (!candidateFits(el, item.value)) {
+          attention.push({...item, reason: el.isContentEditable ?
+            'Enter this rich-text field manually' : 'Saved answer does not meet this field’s format or limits'});
         } else proposals.push(item);
-      } else if ((isRequired(el) || isEeoQuestion(el) || isConsentQuestion(el)) && !(isChoice(el) && peers(el).some(isChecked))) {
+      } else if ((isRequired(el) || isEeoQuestion(el) || isConsentQuestion(el)) && !choiceAnswered) {
         const choiceGroup = el.closest('fieldset,[role="radiogroup"],[role="group"]');
-        const availabilityDays = el.type === 'checkbox' && /\bdays and times you are available to work\b/.test(
-          normalize(choiceGroup?.querySelector('legend')?.textContent));
-        const group = el.type === 'radio' || availabilityDays ? choiceGroup : null;
+        const group = el.type === 'radio' ? choiceGroup : checkboxGroup;
         const groupKey = group || (el.type === 'radio' && el.name ? `${el.form?.id || ''}:${el.name}` : null);
         if (groupKey && attentionGroups.has(groupKey)) continue;
         if (groupKey) attentionGroups.add(groupKey);
@@ -1859,7 +1909,7 @@
     const el = item.el;
     if (!globalThis.__jamieJobAutofill || !el.isConnected || !isVisible(el) || currentAnswer(el)) return false;
     const fresh = answerFor(el);
-    if (!fresh || fresh.value !== item.value) return false;
+    if (!fresh || fresh.value !== item.value || !candidateFits(el, item.value)) return false;
     if (isChoice(el)) { el.click(); return isChecked(el); }
     if (isCustom(el)) return chooseCustom(item);
     if (el instanceof HTMLSelectElement) {
