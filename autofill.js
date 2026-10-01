@@ -1,0 +1,2321 @@
+(() => {
+  'use strict';
+  if (globalThis.__jamieJobAutofill) return;
+  globalThis.__jamieJobAutofill = {
+    destroy() {
+      ['jk-autofill-launcher', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
+        .forEach(id => document.getElementById(id)?.remove());
+      delete globalThis.__jamieJobAutofill;
+    }
+  };
+  const launcherStyle = document.createElement('style');
+  launcherStyle.id = 'jk-launcher-style';
+  launcherStyle.textContent = `
+    #jk-autofill-launcher {position:fixed!important;right:18px!important;bottom:18px!important;
+      z-index:2147483646!important;padding:12px 18px!important;border:0!important;border-radius:24px!important;
+      background:#194e9e!important;color:#fff!important;font:600 14px system-ui,sans-serif!important;
+      box-shadow:0 4px 18px #0003!important;cursor:pointer!important;}
+    #jk-field-memory-button {position:fixed!important;z-index:2147483647!important;width:28px!important;height:28px!important;
+      min-width:28px!important;min-height:28px!important;padding:0!important;margin:0!important;border:2px solid #fff!important;
+      border-radius:999px!important;background:#194e9e!important;color:#fff!important;box-shadow:0 2px 8px #0005!important;
+      font:700 16px/24px system-ui,sans-serif!important;text-align:center!important;cursor:pointer!important;display:none!important;}
+    #jk-field-memory-button[data-saved="true"] {background:#2f7d45!important;}
+    #jk-field-memory-menu {position:fixed!important;z-index:2147483647!important;width:210px!important;padding:8px!important;
+      margin:0!important;background:#fff!important;color:#222!important;border:1px solid #cfcfcf!important;border-radius:10px!important;
+      box-shadow:0 8px 28px #0004!important;font:13px system-ui,sans-serif!important;display:none!important;}
+    #jk-field-memory-menu .jk-memory-title {font-weight:700!important;margin:2px 4px 7px!important;white-space:nowrap!important;
+      overflow:hidden!important;text-overflow:ellipsis!important;}
+    #jk-field-memory-menu button {display:block!important;width:100%!important;margin:4px 0!important;padding:8px 9px!important;
+      border:1px solid #d7d7d7!important;border-radius:7px!important;background:#f7f7f7!important;color:#222!important;
+      font:13px system-ui,sans-serif!important;text-align:left!important;cursor:pointer!important;}
+    #jk-field-memory-menu button:hover {background:#ececec!important;}
+    #jk-field-memory-menu button:disabled {opacity:.45!important;cursor:default!important;}
+  `;
+  (document.head || document.documentElement).appendChild(launcherStyle);
+
+  const PROFILE = {
+    "firstName": "",
+    "preferredName": "",
+    "lastName": "",
+    "fullName": "",
+    "email": "",
+    "phone": "",
+    "phoneDeviceType": "",
+    "phoneCountryCode": "",
+    "city": "",
+    "state": "",
+    "stateCode": "",
+    "country": "",
+    "countryCode": "",
+    "portfolio": "",
+    "linkedin": "",
+    "professionalTitle": "",
+    "yearsExperience": "",
+    "highestEducation": "",
+    "language": "",
+    "summary": "",
+    "skills": "",
+    "jobs": [],
+    "education": []
+  };
+
+  /*
+   * OPTIONAL ANSWERS
+   *
+   * Enter answers through Edit my profile in the extension.
+   * Leave blank if you want the script to skip them.
+   *
+   * For yes/no questions, use:
+   * 'Yes'
+   * 'No'
+   */
+
+  const OPTIONAL = {
+    "ssnLastFour": "",
+    "meetsListedMinimumRequirements": "",
+    "currentlyAnEmployee": "",
+    "veteranStatus": "",
+    "streetAddress": "",
+    "addressLine2": "",
+    "zipCode": "",
+    "desiredSalary": "",
+    "earliestStartDate": "",
+    "noticePeriod": "",
+    "authorizedToWork": "",
+    "requiresSponsorship": "",
+    "willingToRelocate": "",
+    "willingToTravel": "",
+    "travelPercentage": "",
+    "remotePreference": "",
+    "employmentType": "",
+    "desiredHoursPerWeek": "",
+    "referralSource": "",
+    "employeeReferralName": "",
+    "securityClearance": "",
+    "github": "",
+    "otherWebsite": "",
+    "currentCompany": "",
+    "currentJobTitle": "",
+    "previouslyEmployedByCompany": "",
+    "previouslyAppliedToCompany": "",
+    "nonCompeteAgreement": "",
+    "conflictOfInterest": ""
+  };
+
+  /*
+   * These are deliberately NOT auto-filled by general matching.
+   * The explicitly configured veteran answer has a separate exact-match handler.
+   */
+
+  const SENSITIVE_TERMS = [
+    'race',
+    'ethnicity',
+    'ethnic',
+    'gender',
+    'sexual orientation',
+    'veteran',
+    'disability',
+    'disabled',
+    'religion',
+    'marital',
+    'pregnan',
+    'date of birth',
+    'birth date',
+    'dob',
+    'social security',
+    'ssn',
+    'medical',
+    'pronoun',
+    'citizenship status',
+    'self identification',
+    'self-identification',
+    'voluntary self',
+    'eeo'
+  ];
+
+  const normalize = (text) =>
+    String(text || '')
+      .toLowerCase()
+      .replace(/\u00a0/g, ' ')
+      .replace(/[_\-:/()[\],.?*]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  function isVisible(el) {
+    if (!el || el.disabled || el.type === 'hidden') {
+      return false;
+    }
+
+    const style = getComputedStyle(el);
+
+    return (
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      el.getClientRects().length > 0
+    );
+  }
+
+  function getLabelText(el) {
+    const pieces = [];
+
+    if (el.labels) {
+      [...el.labels].forEach((label) => {
+        pieces.push(label.innerText || label.textContent || '');
+      });
+    }
+
+    if (el.id) {
+      try {
+        document
+          .querySelectorAll(`label[for="${CSS.escape(el.id)}"]`)
+          .forEach((label) => {
+            pieces.push(label.innerText || label.textContent || '');
+          });
+      } catch (error) {}
+    }
+
+    const parentLabel = el.closest('label');
+
+    if (parentLabel) {
+      pieces.push(
+        parentLabel.innerText ||
+        parentLabel.textContent ||
+        ''
+      );
+    }
+
+    const labelledBy =
+      el.getAttribute('aria-labelledby');
+
+    if (labelledBy) {
+      labelledBy.split(/\s+/).forEach((id) => {
+        const node =
+          document.getElementById(id);
+
+        if (node) {
+          pieces.push(
+            node.innerText ||
+            node.textContent ||
+            ''
+          );
+        }
+      });
+    }
+
+    return pieces.join(' ');
+  }
+
+  function getDescriptor(el) {
+    const container =
+      el.closest(
+        '[role="group"], fieldset, .form-group, .field, .question, .form-field, li, tr'
+      );
+
+    const context =
+      container
+        ? (
+            container.innerText ||
+            container.textContent ||
+            ''
+          ).slice(0, 500)
+        : '';
+
+    return normalize(
+      [
+        getLabelText(el),
+        el.getAttribute('aria-label'),
+        el.getAttribute('placeholder'),
+        el.getAttribute('name'),
+        el.getAttribute('id'),
+        el.getAttribute('data-automation-id'),
+        el.getAttribute('data-testid'),
+        el.getAttribute('autocomplete'),
+        context
+      ]
+        .filter(Boolean)
+        .join(' | ')
+    );
+  }
+
+  function isSensitive(desc) {
+    return SENSITIVE_TERMS.some(
+      (term) => desc.includes(term)
+    );
+  }
+
+  function hasValue(el) {
+    if (el instanceof HTMLSelectElement) {
+      const selected = [...el.selectedOptions];
+      return selected.some((option) => {
+        const label = normalize(option.textContent).replace(/^[\s\u2013\u2014-]+|[\s\u2013\u2014-]+$/g, '');
+        return option.value.trim() !== '' && !option.disabled &&
+          !/^(?:(?:please )?(?:select|choose|pick)(?:\b.*)?|not selected|none selected)$/i.test(label);
+      });
+    }
+    if (
+      el.type === 'radio' ||
+      el.type === 'checkbox'
+    ) {
+      return el.checked;
+    }
+
+    return String(
+      el.value || ''
+    ).trim() !== '';
+  }
+
+  function fireEvents(el) {
+    [
+      'input',
+      'change',
+      'blur'
+    ].forEach((type) => {
+      el.dispatchEvent(
+        new Event(type, {
+          bubbles: true
+        })
+      );
+    });
+  }
+
+  function setValue(el, value) {
+    if (
+      value === null ||
+      value === undefined ||
+      String(value).trim() === ''
+    ) {
+      return false;
+    }
+
+    const str =
+      String(value);
+
+    if (
+      el instanceof HTMLSelectElement
+    ) {
+      const wanted =
+        normalize(str);
+
+      const options =
+        [...el.options].filter((o) => !o.disabled && !o.parentElement?.disabled && o.value.trim() !== '');
+
+      let option =
+        options.find(
+          (o) =>
+            normalize(o.value) === wanted ||
+            normalize(o.textContent) === wanted
+        );
+
+      if (!option && ['mobile', 'linkedin', '40'].includes(wanted)) {
+        const aliases = {
+          mobile: ['mobile', 'mobile phone', 'cell', 'cell phone', 'cellular', 'cellular phone'],
+          linkedin: ['linkedin', 'linked in'],
+          '40': ['40', '40 hours', '40 hours per week', '40 hrs', '40 hrs per week']
+        };
+        option = options.find(o => [o.value, o.textContent].some(text =>
+          aliases[wanted].includes(normalize(text))));
+      }
+
+      if (
+        !option &&
+        wanted === 'maryland'
+      ) {
+        option =
+          options.find(
+            (o) =>
+              [
+                'md',
+                'maryland',
+                'us md',
+                'maryland md',
+                'md maryland'
+              ].includes(
+                normalize(o.value)
+              ) ||
+              [
+                'md',
+                'maryland',
+                'us md',
+                'maryland md',
+                'md maryland'
+              ].includes(
+                normalize(o.textContent)
+              )
+          );
+      }
+
+      if (
+        !option &&
+        wanted === 'united states'
+      ) {
+        option =
+          options.find((o) => {
+            const values = [
+              normalize(o.value),
+              normalize(o.textContent)
+            ];
+
+            return values.some(
+              (value) =>
+                [
+                  'us',
+                  'usa',
+                  'united states',
+                  'united states of america',
+                  'united states us',
+                  'united states usa',
+                  'us united states',
+                  'usa united states',
+                  'united states of america usa',
+                  'u s',
+                  'u s a'
+                ].includes(value)
+            );
+          });
+      }
+
+      if (
+        !option &&
+        wanted.includes('bachelor')
+      ) {
+        option =
+          options.find(
+            (o) =>
+              normalize(
+                o.textContent
+              ).includes(
+                'bachelor'
+              )
+          );
+      }
+
+      if (!option) {
+        return false;
+      }
+
+      const selectSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+      if (selectSetter) selectSetter.call(el, option.value);
+      else el.value = option.value;
+
+      fireEvents(el);
+
+      return el.value === option.value;
+    }
+
+    if (
+      [
+        'file',
+        'radio',
+        'checkbox'
+      ].includes(el.type)
+    ) {
+      return false;
+    }
+
+    const proto =
+      el instanceof HTMLTextAreaElement
+        ? HTMLTextAreaElement.prototype
+        : HTMLInputElement.prototype;
+
+    const setter =
+      Object.getOwnPropertyDescriptor(
+        proto,
+        'value'
+      )?.set;
+
+    try {
+      if (setter) {
+        setter.call(
+          el,
+          str
+        );
+      } else {
+        el.value =
+          str;
+      }
+    } catch (error) {
+      el.value =
+        str;
+    }
+
+    fireEvents(el);
+
+    return true;
+  }
+
+  function isPhoneCountrySelect(el, desc) {
+    if (!(el instanceof HTMLSelectElement)) return false;
+    const identity = normalize([
+      getLabelText(el), el.getAttribute('aria-label'),
+      el.name, el.id, el.getAttribute('autocomplete'),
+      el.getAttribute('data-automation-id')
+    ].filter(Boolean).join(' ').replace(/([a-z])([A-Z])/g, '$1 $2'));
+    // Prefer the field's own label; nearby phone fields must not turn a
+    // residence-country dropdown into a telephone dialing-code dropdown.
+    return /\b(?:dial|dialing|dialling|calling) (?:code|prefix)\b/.test(identity) ||
+      /\btel country code\b/.test(identity) ||
+      (/\b(?:phone|mobile|telephone|cell)\b/.test(identity) && /\b(?:country|prefix|code)\b/.test(identity)) ||
+      (/\bcountry code\b/.test(identity) && /\b(?:phone|mobile|telephone|cell)\b/.test(desc));
+  }
+
+  function fillPhoneCountrySelect(el) {
+    if (!PROFILE.phoneCountryCode) return false;
+    const option = matchingOption([...el.options], {value: PROFILE.phoneCountryCode, phoneCode: true});
+    if (!option) return false;
+    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+    if (setter) setter.call(el, option.value);
+    else el.value = option.value;
+    fireEvents(el);
+    return el.value === option.value;
+  }
+
+  /*
+   * FIELD MATCHING RULES
+   */
+
+  const RULES = [
+    [
+      () => PROFILE.phoneDeviceType,
+      [/\bphone (?:device )?type\b/, /\btelephone type\b/, /\bdevice type\b/]
+    ],
+    [
+      () => OPTIONAL.referralSource,
+      [/\bhow did you hear\b/, /\bhow did you find\b/, /\breferral source\b/, /\bapplication source\b/]
+    ],
+    [
+      () => PROFILE.firstName,
+      [
+        /\bfirst name\b/,
+        /\bgiven name\b/,
+        /\bfname\b/
+      ],
+      [
+        /reference/,
+        /manager/,
+        /supervisor/
+      ]
+    ],
+
+    [
+      () => PROFILE.preferredName,
+      [
+        /\bpreferred.*name\b/,
+        /\bnickname\b/
+      ]
+    ],
+
+    [
+      () => PROFILE.lastName,
+      [
+        /\blast name\b/,
+        /\bfamily name\b/,
+        /\bsurname\b/,
+        /\blname\b/
+      ],
+      [
+        /reference/,
+        /manager/,
+        /supervisor/
+      ]
+    ],
+
+    [
+      () => PROFILE.fullName,
+      [
+        /\bfull name\b/,
+        /\blegal name\b/,
+        /\bcandidate name\b/,
+        /\bapplicant name\b/
+      ],
+      [
+        /company/,
+        /employer/,
+        /school/,
+        /reference/
+      ]
+    ],
+
+    [
+      () => PROFILE.email,
+      [
+        /\be-?mail\b/,
+        /\bemail address\b/
+      ],
+      [
+        /reference/,
+        /manager/,
+        /supervisor/
+      ]
+    ],
+
+    [
+      () => PROFILE.phone,
+      [
+        /\bphone\b/,
+        /\bmobile\b/,
+        /\btelephone\b/,
+        /\bcell\b/
+      ],
+      [
+        /reference/,
+        /manager/,
+        /supervisor/,
+        /fax/
+      ]
+    ],
+
+    [
+      () => PROFILE.city,
+      [
+        /\bcity\b/,
+        /\blocality\b/
+      ],
+      [
+        /company/,
+        /employer/,
+        /school/
+      ]
+    ],
+
+    [
+      () => PROFILE.state,
+      [
+        /\bstate\b/,
+        /\bprovince\b/,
+        /\bregion\b/
+      ],
+      [
+        /statement/,
+        /company/,
+        /employer/,
+        /school/
+      ]
+    ],
+
+    [
+      () => PROFILE.country,
+      [
+        /\bcountry\b/,
+        /\bcountry of residence\b/
+      ],
+      [
+        /citizenship/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.streetAddress,
+      [
+        /\bstreet address\b/,
+        /\baddress line 1\b/,
+        /\baddress1\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.addressLine2,
+      [
+        /\baddress line 2\b/,
+        /\baddress2\b/,
+        /\bapt\b/,
+        /\bsuite\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.zipCode,
+      [
+        /\bzip\b/,
+        /\bpostal\b/,
+        /\bpostal code\b/
+      ]
+    ],
+
+    [
+      () => PROFILE.portfolio,
+      [
+        /\bportfolio\b/,
+        /\bpersonal website\b/,
+        /\bprofessional website\b/
+      ]
+    ],
+
+    [
+      () => PROFILE.linkedin,
+      [
+        /\blinked ?in\b/,
+        /\blinkedin\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.github,
+      [
+        /\bgithub\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.otherWebsite,
+      [
+        /\bother (website|url|link)\b/,
+        /\badditional (website|url|link)\b/
+      ]
+    ],
+
+    [
+      () => PROFILE.professionalTitle,
+      [
+        /\bprofessional title\b/,
+        /\bprofile title\b/,
+        /\bheadline\b/
+      ],
+      [
+        /\bjob title\b/,
+        /\bcurrent title\b/
+      ]
+    ],
+
+    [
+      () => PROFILE.yearsExperience,
+      [
+        /\byears? of .*experience\b/,
+        /\btotal years? experience\b/,
+        /\byears? experience\b/
+      ]
+    ],
+
+    [
+      () => PROFILE.summary,
+      [
+        /\bprofessional summary\b/,
+        /\bprofile summary\b/,
+        /\bcareer summary\b/,
+        /\babout you\b/
+      ],
+      [],
+      true
+    ],
+
+    [
+      () => PROFILE.skills,
+      [
+        /\btechnical skills\b/,
+        /\bkey skills\b/,
+        /\bskills\b/,
+        /\btechnologies\b/
+      ],
+      [],
+      true
+    ],
+
+    [
+      () => PROFILE.language,
+      [
+        /\bprimary language\b/,
+        /\blanguage\b/
+      ],
+      [
+        /programming/,
+        /coding/
+      ]
+    ],
+
+    [
+      () => PROFILE.highestEducation,
+      [
+        /\bhighest .*education\b/,
+        /\beducation level\b/,
+        /\bhighest degree\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.desiredSalary,
+      [
+        /\bdesired salary\b/,
+        /\bsalary expectation\b/,
+        /\bexpected salary\b/,
+        /\bcompensation expectation\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.earliestStartDate,
+      [
+        /\bearliest start\b/,
+        /\bavailable start\b/,
+        /\bstart date\b/,
+        /\bdate available\b/,
+        /\bwhen can you start\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.noticePeriod,
+      [
+        /\bnotice period\b/,
+        /\bhow much notice\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.remotePreference,
+      [
+        /\bremote preference\b/,
+        /\bwork arrangement\b/,
+        /\bwork location preference\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.employmentType,
+      [
+        /\bemployment type\b/,
+        /\bdesired employment\b/,
+        /\bwork type\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.desiredHoursPerWeek,
+      [
+        /\bhours per week\b/,
+        /\bdesired hours\b/,
+        /\bweekly hours\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.travelPercentage,
+      [
+        /\btravel percentage\b/,
+        /\bpercent.*travel\b/,
+        /\btravel.*percent\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.referralSource,
+      [
+        /\bhow did you hear\b/,
+        /\bhow did you find\b/,
+        /\breferral source\b/,
+        /\bapplication source\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.employeeReferralName,
+      [
+        /\bemployee referral\b/,
+        /\breferrer\b/,
+        /\bwho referred\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.securityClearance,
+      [
+        /\bsecurity clearance\b/,
+        /\bclearance level\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.currentCompany,
+      [
+        /\bcurrent (company|employer)\b/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.currentJobTitle,
+      [
+        /\bcurrent (job )?title\b/,
+        /\bcurrent position\b/
+      ]
+    ]
+  ];
+
+  /*
+   * YES / NO QUESTION MATCHING
+   */
+
+  const YES_NO_RULES = [
+    [
+      () => OPTIONAL.meetsListedMinimumRequirements,
+      [/\b(?:do you|are you able to) meet all (?:of )?(?:the )?(?:above |listed |these )?minimum requirements\b/,
+       /\bdo you meet all (?:of )?the (?:above|listed) requirements\b/]
+    ],
+    [
+      () => OPTIONAL.currentlyAnEmployee,
+      [/\bare you currently an employee\b/]
+    ],
+    [
+      () => OPTIONAL.authorizedToWork,
+      [
+        /authorized.*work/,
+        /legally.*work/,
+        /work.*authorization/,
+        /eligible.*work/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.requiresSponsorship,
+      [
+        /require.*sponsor/,
+        /need.*sponsor/,
+        /visa.*sponsor/,
+        /sponsorship/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.willingToRelocate,
+      [
+        /willing.*relocat/,
+        /open.*relocat/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.willingToTravel,
+      [
+        /willing.*travel/,
+        /travel.*required/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.previouslyEmployedByCompany,
+      [
+        /previously.*employ/,
+        /former.*employee/,
+        /worked.*here.*before/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.previouslyAppliedToCompany,
+      [
+        /previously.*appl/,
+        /applied.*before/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.nonCompeteAgreement,
+      [
+        /non.?compete/,
+        /restrictive covenant/
+      ]
+    ],
+
+    [
+      () => OPTIONAL.conflictOfInterest,
+      [
+        /conflict.*interest/
+      ]
+    ]
+  ];
+
+  function fillTextFields() {
+    let filled = 0;
+
+    [
+      ...document.querySelectorAll(
+        'input, textarea, select'
+      )
+    ]
+      .filter(isVisible)
+      .forEach((el) => {
+        if (
+          [
+            'button',
+            'submit',
+            'reset',
+            'file',
+            'password',
+            'hidden'
+          ].includes(
+            (
+              el.type ||
+              ''
+            ).toLowerCase()
+          )
+        ) {
+          return;
+        }
+
+        if (
+          hasValue(el)
+        ) {
+          return;
+        }
+
+        const desc =
+          getDescriptor(el);
+
+        if (
+          !desc ||
+          isSensitive(desc)
+        ) {
+          return;
+        }
+
+        if (isPhoneCountrySelect(el, desc)) {
+          if (fillPhoneCountrySelect(el)) {
+            el.style.boxShadow = '0 0 0 2px rgba(45,130,80,.35)';
+            filled++;
+          }
+          return;
+        }
+
+        const yesNoRule = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(desc)));
+        const rule = yesNoRule ||
+          RULES.find(
+            ([
+              getter,
+              patterns,
+              excludes = [],
+              textareaOnly = false
+            ]) => {
+              if (
+                textareaOnly &&
+                !(
+                  el instanceof
+                  HTMLTextAreaElement
+                )
+              ) {
+                return false;
+              }
+
+              if (
+                excludes.some(
+                  (rx) =>
+                    rx.test(desc)
+                )
+              ) {
+                return false;
+              }
+
+              return patterns.some(
+                (rx) =>
+                  rx.test(desc)
+              );
+            }
+          );
+
+        if (!rule) {
+          return;
+        }
+
+        const value =
+          rule[0]();
+
+        if (
+          value &&
+          setValue(
+            el,
+            value
+          )
+        ) {
+          el.style.boxShadow =
+            '0 0 0 2px rgba(45,130,80,.35)';
+
+          filled++;
+        }
+      });
+
+    return filled;
+  }
+
+  function fillYesNo() {
+    let filled = 0;
+
+    const groups =
+      new Map();
+
+    document
+      .querySelectorAll(
+        'input[type="radio"]'
+      )
+      .forEach((radio) => {
+        if (
+          !isVisible(radio)
+        ) {
+          return;
+        }
+
+        const key =
+          radio.name ||
+          radio.closest(
+            '[role="radiogroup"]'
+          ) ||
+          radio.parentElement;
+
+        if (
+          !groups.has(key)
+        ) {
+          groups.set(
+            key,
+            []
+          );
+        }
+
+        groups
+          .get(key)
+          .push(radio);
+      });
+
+    for (
+      const radios
+      of groups.values()
+    ) {
+      if (
+        radios.some(
+          (radio) =>
+            radio.checked
+        )
+      ) {
+        continue;
+      }
+
+      const desc =
+        normalize(
+          radios
+            .map(
+              getDescriptor
+            )
+            .join(' | ')
+        );
+
+      if (
+        isSensitive(desc)
+      ) {
+        continue;
+      }
+
+      const rule =
+        YES_NO_RULES.find(
+          ([
+            getter,
+            patterns
+          ]) =>
+            patterns.some(
+              (rx) =>
+                rx.test(desc)
+            )
+        );
+
+      if (!rule) {
+        continue;
+      }
+
+      const answer =
+        normalize(
+          rule[0]()
+        );
+
+      if (
+        ![
+          'yes',
+          'no'
+        ].includes(answer)
+      ) {
+        continue;
+      }
+
+      const target =
+        radios.find(
+          (radio) => {
+            const text =
+              normalize(
+                [
+                  radio.value,
+                  getLabelText(
+                    radio
+                  ),
+                  radio.getAttribute(
+                    'aria-label'
+                  )
+                ].join(' ')
+              );
+
+            return new RegExp(
+              `\\b${answer}\\b`
+            ).test(text);
+          }
+        );
+
+      if (target) {
+        target.click();
+
+        fireEvents(
+          target
+        );
+
+        filled++;
+      }
+    }
+
+    return filled;
+  }
+
+  function fillCurrentEmployeeCheckboxes() {
+    if (OPTIONAL.currentlyAnEmployee !== 'No') return 0;
+    let filled = 0;
+    const selector = 'input[type="checkbox"], input[type="radio"], [role="checkbox"], [role="radio"]';
+    const checked = el => el.checked === true || el.getAttribute('aria-checked') === 'true';
+    for (const el of document.querySelectorAll(selector)) {
+      if (!isVisible(el) || el.getAttribute('aria-disabled') === 'true' || checked(el)) continue;
+      const label = normalize(getLabelText(el) || el.getAttribute('aria-label') || el.textContent);
+      // Only an explicit No option is selected. A standalone affirmative
+      // checkbox is left unchecked; it must never be ticked to mean No.
+      if (label !== 'no') continue;
+      let group = el.parentElement;
+      let questionGroup = null;
+      for (let depth = 0; group && depth < 6; depth++, group = group.parentElement) {
+        if (group === document.body || group.tagName === 'FORM') break;
+        const text = normalize(group.innerText || group.textContent);
+        if (text.length > 1000) break;
+        if (/\bare you currently an employee\b/.test(text)) {
+          questionGroup = group;
+          break;
+        }
+      }
+      if (!questionGroup) continue;
+      const peers = [...questionGroup.querySelectorAll(selector)];
+      if (peers.some(checked)) continue;
+      el.click();
+      if (checked(el)) filled++;
+    }
+    return filled;
+  }
+
+  function fillMinimumRequirementsOptions() {
+    if (OPTIONAL.meetsListedMinimumRequirements !== 'Yes') return 0;
+    let filled = 0;
+    const selector = 'input[type="checkbox"], input[type="radio"], [role="checkbox"], [role="radio"]';
+    const checked = el => el.checked === true || el.getAttribute('aria-checked') === 'true';
+    const patterns = YES_NO_RULES[0][1];
+    for (const el of document.querySelectorAll(selector)) {
+      if (!isVisible(el) || checked(el) || el.getAttribute('aria-disabled') === 'true') continue;
+      const label = normalize(getLabelText(el) || el.getAttribute('aria-label') || el.textContent);
+      if (label !== 'yes') continue;
+      let group = el.parentElement;
+      for (let depth = 0; group && depth < 6; depth++, group = group.parentElement) {
+        if (group === document.body || group.tagName === 'FORM') break;
+        const text = normalize(group.innerText || group.textContent);
+        if (text.length > 2000) break;
+        if (!patterns.some(rx => rx.test(text))) continue;
+        if (![...group.querySelectorAll(selector)].some(checked)) {
+          el.click();
+          if (checked(el)) filled++;
+        }
+        break;
+      }
+    }
+    return filled;
+  }
+
+  function isChosenVeteranAnswer(text) {
+    return normalize(text) === normalize(OPTIONAL.veteranStatus);
+  }
+
+  function fillVeteranStatus() {
+    if (!OPTIONAL.veteranStatus) return 0;
+    let filled = 0;
+    const controls = [...document.querySelectorAll('input[type="checkbox"], input[type="radio"], select')];
+    for (const el of controls) {
+      if (!isVisible(el)) continue;
+      if (el instanceof HTMLSelectElement) {
+        if (hasValue(el) || !/\bveteran\b/.test(getDescriptor(el))) continue;
+        const option = [...el.options].find(o => !o.disabled && !o.parentElement?.disabled &&
+          o.value.trim() !== '' && isChosenVeteranAnswer(o.textContent));
+        if (option && setValue(el, option.value)) filled++;
+        continue;
+      }
+      if (el.checked) continue;
+      // Check individual labels rather than nearby question text, which may
+      // contain every answer and could otherwise select the wrong checkbox.
+      const labels = [...(el.labels || [])].map(label => label.textContent);
+      labels.push(el.getAttribute('aria-label'));
+      const labelledBy = el.getAttribute('aria-labelledby');
+      if (labelledBy) labels.push(labelledBy.split(/\s+/).map(id =>
+        document.getElementById(id)?.textContent || '').join(' '));
+      if (!labels.some(isChosenVeteranAnswer)) continue;
+      const group = el.closest('fieldset, [role="radiogroup"], [role="group"], .form-group, .question, .field');
+      // Keep any existing response in the same question.
+      if (group && [...group.querySelectorAll('input')].some(other => other !== el && other.checked)) continue;
+      if (el.type === 'radio' && el.name && controls.some(other =>
+        other.type === 'radio' && other.name === el.name && other.form === el.form && other.checked)) continue;
+      el.click();
+      if (el.checked) {
+        el.style.boxShadow = '0 0 0 2px rgba(45,130,80,.35)';
+        filled++;
+      }
+    }
+    return filled;
+  }
+
+  function isRequired(el) {
+    if (
+      el.required ||
+      el.getAttribute(
+        'aria-required'
+      ) === 'true'
+    ) {
+      return true;
+    }
+
+    if (
+      /\*/.test(
+        getLabelText(el)
+      )
+    ) {
+      return true;
+    }
+
+    const container =
+      el.closest(
+        '.required,[data-required="true"],.form-group,.field,.question'
+      );
+
+    if (!container) {
+      return false;
+    }
+
+    const text =
+      (
+        container.innerText ||
+        ''
+      ).slice(
+        0,
+        250
+      );
+
+    return (
+      /\*/.test(text) ||
+      /\brequired\b/i.test(
+        text
+      )
+    );
+  }
+
+  function highlightRequired() {
+    document
+      .querySelectorAll(
+        'input, textarea, select'
+      )
+      .forEach((el) => {
+        if (
+          !isVisible(el) ||
+          !isRequired(el) ||
+          hasValue(el)
+        ) {
+          return;
+        }
+
+        if (
+          [
+            'hidden',
+            'button',
+            'submit'
+          ].includes(
+            el.type
+          )
+        ) {
+          return;
+        }
+
+        const desc =
+          getDescriptor(el);
+
+        el.style.outline =
+          isSensitive(desc)
+            ? '3px solid #d89b00'
+            : '3px solid #c94b4b';
+
+        el.style.outlineOffset =
+          '2px';
+
+        el.title =
+          isSensitive(desc)
+            ? 'Manual review: sensitive/self-ID field'
+            : 'Required field still needs an answer';
+      });
+  }
+
+
+  let LEARNED_FIELDS = [];
+  let activeMemoryField = null;
+  let memoryButton = null;
+  let memoryMenu = null;
+
+  const memoryUnsafeTerms = [
+    'password', 'passcode', 'pin', 'social security', 'ssn', 'bank account',
+    'routing number', 'credit card', 'debit card', 'card number', 'cvv', 'cvc',
+    'security code', 'driver license', 'drivers license', 'passport number'
+  ];
+
+  function memoryQuestionText(el) {
+    const groupPieces = [];
+    const fieldset = el.closest('fieldset,[role="radiogroup"],[role="group"]');
+    if (fieldset) {
+      const legend = fieldset.querySelector('legend');
+      if (legend) groupPieces.push(legend.innerText || legend.textContent || '');
+      const labelledBy = fieldset.getAttribute('aria-labelledby');
+      if (labelledBy) labelledBy.split(/\s+/).forEach(id => {
+        const node = document.getElementById(id);
+        if (node) groupPieces.push(node.innerText || node.textContent || '');
+      });
+    }
+    // For radio groups, the legend/question is the identity. Including the
+    // individual option label would make Yes and No look like different fields.
+    if (groupPieces.some(Boolean) && (el.type === 'radio' || el.getAttribute('role') === 'radio')) {
+      return normalize(groupPieces.filter(Boolean).join(' | '));
+    }
+    const pieces = [
+      ...groupPieces,
+      getLabelText(el),
+      el.getAttribute('aria-label') || '',
+      el.getAttribute('placeholder') || ''
+    ];
+    return normalize(pieces.filter(Boolean).join(' | '));
+  }
+
+  function memoryIdentity(el) {
+    return {
+      question: memoryQuestionText(el),
+      name: normalize(el.getAttribute('name') || ''),
+      id: normalize(el.id || ''),
+      placeholder: normalize(el.getAttribute('placeholder') || ''),
+      type: normalize(el.type || el.tagName),
+      host: location.hostname
+    };
+  }
+
+  function memoryDisplayLabel(el) {
+    const raw = memoryQuestionText(el);
+    return raw || normalize(el.name || el.id || el.placeholder || 'Unlabeled field');
+  }
+
+  function learnedMatchScore(saved, el) {
+    const current = memoryIdentity(el);
+    let score = 0;
+    if (saved.host && saved.host === current.host) score += 1;
+    if (saved.name && current.name && saved.name === current.name) score += 5;
+    if (saved.id && current.id && saved.id === current.id) score += 5;
+    if (saved.placeholder && current.placeholder && saved.placeholder === current.placeholder) score += 3;
+    if (saved.question && current.question && saved.question === current.question) score += 8;
+    else if (saved.question && current.question && saved.question.length >= 12 && current.question.length >= 12 &&
+      (saved.question.includes(current.question) || current.question.includes(saved.question))) score += 4;
+    if (saved.type && current.type && saved.type === current.type) score += 1;
+    return score;
+  }
+
+  function findLearnedField(el) {
+    let best = null;
+    let bestScore = 0;
+    for (const saved of LEARNED_FIELDS) {
+      const score = learnedMatchScore(saved, el);
+      if (score > bestScore) { best = saved; bestScore = score; }
+    }
+    return bestScore >= 6 ? best : null;
+  }
+
+  function isMemoryUnsafe(el) {
+    if (!el || el.type === 'password' || el.type === 'file' || el.type === 'hidden') return true;
+    const desc = getDescriptor(el);
+    return memoryUnsafeTerms.some(term => desc.includes(term));
+  }
+
+  function choiceGroup(el) {
+    if (el.type === 'radio' && el.name) {
+      return [...document.querySelectorAll('input[type="radio"]')]
+        .filter(other => other.name === el.name && other.form === el.form);
+    }
+    if (el.type === 'checkbox') return [el];
+    return [];
+  }
+
+  function valueForMemory(el) {
+    if (el instanceof HTMLSelectElement) {
+      const option = el.options[el.selectedIndex];
+      return option ? (option.textContent || option.value || '').trim() : '';
+    }
+    if (el.type === 'radio') {
+      const checked = choiceGroup(el).find(other => other.checked);
+      if (!checked) return '';
+      return (getLabelText(checked) || checked.value || '').trim();
+    }
+    if (el.type === 'checkbox') return el.checked ? 'Yes' : 'No';
+    return String(el.value || '').trim();
+  }
+
+  async function persistLearnedFields() {
+    await browser.storage.local.set({ learnedFields: LEARNED_FIELDS });
+  }
+
+  async function rememberCurrentField(mode) {
+    const el = activeMemoryField;
+    if (!el || !el.isConnected) { toast('Click a form field first.'); return; }
+    if (isMemoryUnsafe(el)) { toast('This type of sensitive field is not saved.'); return; }
+    const existing = findLearnedField(el);
+    let value = valueForMemory(el);
+    if (!value) {
+      value = window.prompt('What should I remember for this field?', existing?.answer || '');
+      if (value === null) return;
+      value = value.trim();
+    }
+    if (!value) { toast('Enter an answer in the field first.'); return; }
+    const identity = memoryIdentity(el);
+    const record = {
+      id: existing?.id || `learned-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+      ...identity,
+      label: memoryDisplayLabel(el),
+      answer: value,
+      updatedAt: Date.now()
+    };
+    if (existing) LEARNED_FIELDS = LEARNED_FIELDS.map(item => item.id === existing.id ? record : item);
+    else LEARNED_FIELDS.push(record);
+    await persistLearnedFields();
+    updateMemoryControl(el);
+    toast(mode === 'update' || existing ? 'Remembered answer updated.' : 'Field remembered.');
+  }
+
+  async function removeCurrentField() {
+    const el = activeMemoryField;
+    const existing = el && findLearnedField(el);
+    if (!existing) { toast('This field is not currently remembered.'); return; }
+    LEARNED_FIELDS = LEARNED_FIELDS.filter(item => item.id !== existing.id);
+    await persistLearnedFields();
+    updateMemoryControl(el);
+    toast('Remembered field removed.');
+  }
+
+  function ensureMemoryControls() {
+    if (!memoryButton) {
+      memoryButton = document.createElement('button');
+      memoryButton.id = 'jk-field-memory-button';
+      memoryButton.type = 'button';
+      memoryButton.textContent = '+';
+      memoryButton.setAttribute('aria-label', 'Remember or update this field');
+      memoryButton.addEventListener('mousedown', event => event.preventDefault());
+      memoryButton.addEventListener('click', event => {
+        event.preventDefault(); event.stopPropagation();
+        if (!activeMemoryField) return;
+        positionMemoryControl(activeMemoryField);
+        memoryMenu.style.display = memoryMenu.style.display === 'block' ? 'none' : 'block';
+      });
+      document.body.appendChild(memoryButton);
+    }
+    if (!memoryMenu) {
+      memoryMenu = document.createElement('div');
+      memoryMenu.id = 'jk-field-memory-menu';
+      memoryMenu.innerHTML = `
+        <div class="jk-memory-title">Field memory</div>
+        <button type="button" data-memory="remember">Remember this field</button>
+        <button type="button" data-memory="update">Update this field</button>
+        <button type="button" data-memory="remove">Remove this field</button>`;
+      memoryMenu.addEventListener('mousedown', event => event.preventDefault());
+      memoryMenu.addEventListener('click', async event => {
+        const button = event.target.closest('button[data-memory]');
+        if (!button || button.disabled) return;
+        event.preventDefault(); event.stopPropagation();
+        memoryMenu.style.display = 'none';
+        if (button.dataset.memory === 'remove') await removeCurrentField();
+        else await rememberCurrentField(button.dataset.memory);
+      });
+      document.body.appendChild(memoryMenu);
+    }
+  }
+
+  function positionMemoryControl(el) {
+    if (!memoryButton || !memoryMenu || !el?.isConnected) return;
+    const rect = el.getBoundingClientRect();
+    const size = 28;
+    let left = Math.min(window.innerWidth - size - 6, Math.max(6, rect.right + 6));
+    let top = Math.min(window.innerHeight - size - 6, Math.max(6, rect.top + Math.min(8, Math.max(0, (rect.height - size) / 2))));
+    if (left + size + 4 > window.innerWidth) left = Math.max(6, rect.right - size - 4);
+    memoryButton.style.left = `${left}px`;
+    memoryButton.style.top = `${top}px`;
+    if (memoryMenu.style.display === 'block') {
+      const menuWidth = 210, menuHeight = 150;
+      let menuLeft = Math.min(window.innerWidth - menuWidth - 6, left);
+      let menuTop = top + size + 6;
+      if (menuTop + menuHeight > window.innerHeight) menuTop = Math.max(6, top - menuHeight - 6);
+      memoryMenu.style.left = `${menuLeft}px`;
+      memoryMenu.style.top = `${menuTop}px`;
+    }
+  }
+
+  function updateMemoryControl(el) {
+    if (!el || !isVisible(el) || isMemoryUnsafe(el) || el.closest('#jk-autofill-panel,#jk-review-host,#jk-field-memory-menu')) {
+      if (memoryButton) memoryButton.style.display = 'none';
+      if (memoryMenu) memoryMenu.style.display = 'none';
+      return;
+    }
+    ensureMemoryControls();
+    activeMemoryField = el;
+    const saved = findLearnedField(el);
+    memoryButton.dataset.saved = saved ? 'true' : 'false';
+    memoryButton.textContent = saved ? '✓' : '+';
+    memoryButton.title = saved ? 'This field is remembered' : 'Remember this field';
+    const title = memoryMenu.querySelector('.jk-memory-title');
+    title.textContent = (memoryDisplayLabel(el) || 'Field').slice(0, 80);
+    const remember = memoryMenu.querySelector('[data-memory="remember"]');
+    const update = memoryMenu.querySelector('[data-memory="update"]');
+    const remove = memoryMenu.querySelector('[data-memory="remove"]');
+    remember.disabled = !!saved;
+    update.disabled = !saved;
+    remove.disabled = !saved;
+    memoryButton.style.display = 'block';
+    positionMemoryControl(el);
+  }
+
+  function installMemoryFieldUI() {
+    ensureMemoryControls();
+    document.addEventListener('focusin', event => {
+      const el = event.target;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || isCustom(el)) {
+        updateMemoryControl(el);
+      }
+    }, true);
+    document.addEventListener('pointerdown', event => {
+      const el = event.target;
+      if (el === memoryButton || memoryMenu?.contains(el)) return;
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || isCustom(el)) {
+        setTimeout(() => updateMemoryControl(el), 0);
+      } else if (!memoryMenu?.contains(el)) {
+        if (memoryMenu) memoryMenu.style.display = 'none';
+        if (memoryButton) memoryButton.style.display = 'none';
+      }
+    }, true);
+    window.addEventListener('scroll', () => activeMemoryField && positionMemoryControl(activeMemoryField), true);
+    window.addEventListener('resize', () => activeMemoryField && positionMemoryControl(activeMemoryField));
+  }
+
+  async function loadSavedProfile() {
+    const saved = await browser.storage.local.get(['jamieProfile', 'learnedFields']);
+    if (saved.jamieProfile) {
+      Object.assign(PROFILE, saved.jamieProfile.profile);
+      Object.assign(OPTIONAL, saved.jamieProfile.optional);
+    }
+    LEARNED_FIELDS = Array.isArray(saved.learnedFields) ? saved.learnedFields : [];
+  }
+  const reviewSelector = 'input, textarea, select, [role="combobox"], button[aria-haspopup="listbox"], [role="checkbox"], [role="radio"]';
+  const isCustom = el => !(el instanceof HTMLSelectElement) &&
+    (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup') === 'listbox');
+  const isChoice = el => ['radio','checkbox'].includes(el.type) || ['radio','checkbox'].includes(el.getAttribute('role'));
+  const isChecked = el => el.checked === true || el.getAttribute('aria-checked') === 'true';
+  function directLabel(el) {
+    const explicit = [...(el.labels || [])].map(label => label.textContent.trim()).filter(Boolean);
+    const labelled = (el.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '').join(' ').trim();
+    const text = explicit[0] || el.getAttribute('aria-label') || labelled || el.getAttribute('placeholder') ||
+      (isChoice(el) ? el.textContent : '') || el.getAttribute('name') || el.id || '';
+    return normalize(text.replace(/([a-z])([A-Z])/g, '$1 $2'));
+  }
+  function currentAnswer(el) {
+    if (isChoice(el)) return isChecked(el);
+    if (!isCustom(el)) return hasValue(el);
+    const text = normalize(el.value || el.textContent || '');
+    return !!text && !/^(?:please )?(?:select|choose|pick|search)(?:\b.*)?$/.test(text);
+  }
+  function peers(el) {
+    if (el.type === 'radio' && el.name) return [...document.querySelectorAll('input[type="radio"]')]
+      .filter(other => other.name === el.name && other.form === el.form);
+    return [...(el.closest('fieldset,[role="radiogroup"],[role="group"],.form-group,.question,.field') || el.parentElement)
+      .querySelectorAll('input[type="checkbox"],input[type="radio"],[role="checkbox"],[role="radio"]')];
+  }
+  function contextLabel(el) {
+    const group = el.closest('fieldset,[role="radiogroup"],[role="group"],.form-group,.question,.field');
+    return normalize([directLabel(el), group?.innerText || '', el.getAttribute('autocomplete') || ''].join(' '));
+  }
+  function answerFor(el) {
+    const direct = directLabel(el);
+    const desc = contextLabel(el);
+    const learned = findLearnedField(el);
+    if (learned && learned.answer) {
+      const wanted = normalize(learned.answer);
+      if (el.type === 'radio' || el.getAttribute('role') === 'radio') {
+        const option = normalize(getLabelText(el) || el.textContent || el.value || '');
+        if (option === wanted || normalize(el.value || '') === wanted) return {value: String(learned.answer), learned: true};
+      } else if (el.type === 'checkbox' || el.getAttribute('role') === 'checkbox') {
+        if (['yes','true','checked','1'].includes(wanted)) return {value: String(learned.answer), learned: true};
+      } else {
+        return {value: String(learned.answer), learned: true};
+      }
+    }
+    if (isChoice(el)) {
+      if (peers(el).some(isChecked)) return null;
+      if (isChosenVeteranAnswer(direct)) return {value: OPTIONAL.veteranStatus};
+      if (isSensitive(desc)) return null;
+      if (!['yes','no'].includes(direct)) return null;
+      const rule = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(desc)));
+      return rule && normalize(rule[0]()) === direct ? {value: rule[0]()} : null;
+    }
+    if (/\bveteran\b/.test(direct)) return {value: OPTIONAL.veteranStatus};
+    if (/\b(?:ssn|social security(?: number)?)\b/.test(direct) &&
+      /\b(?:last|final|ending) (?:4|four)(?: digits?)?\b/.test(direct) &&
+      !/\b(?:full|entire|complete|nine|9)\b/.test(direct)) {
+      return /^\d{4}$/.test(OPTIONAL.ssnLastFour || '') ? {value: OPTIONAL.ssnLastFour} : null;
+    }
+    if (isSensitive(direct)) return null;
+    if (/\b(?:last|final|ending) (?:4|four)(?: digits?)?\b/.test(direct)) return null;
+    if (/\b(?:dial|dialing|dialling|calling) (?:code|prefix)\b/.test(direct) ||
+      /\btel country code\b/.test(normalize(el.getAttribute('autocomplete'))) ||
+      (/\b(?:phone|mobile|telephone)\b/.test(direct) && /\b(?:country|prefix|code)\b/.test(direct)))
+      return PROFILE.phoneCountryCode ? {value: PROFILE.phoneCountryCode, phoneCode: true} : null;
+    // Match the question itself, not the option names in its dropdown.
+    const yesNo = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(direct)));
+    const rule = yesNo || RULES.find(([, patterns, excludes = [], textareaOnly = false]) =>
+      (!textareaOnly || el instanceof HTMLTextAreaElement) && !excludes.some(rx => rx.test(direct)) && patterns.some(rx => rx.test(direct)));
+    const value = rule?.[0]();
+    return value ? {value: String(value)} : null;
+  }
+  function matchingOption(options, item) {
+    const available = options.filter(o => !o.disabled && o.getAttribute?.('aria-disabled') !== 'true' && !o.parentElement?.disabled);
+    const texts = o => [o.textContent, o.value].filter(v => v != null).map(normalize);
+    if (item.phoneCode && /^\+?1$/.test(String(item.value).trim())) return available.find(o => texts(o).some(t => /^(us|usa|united states(?: of america)?)(?: \+?1)?$/.test(t))) ||
+      available.find(o => /^\+?1$/.test((o.textContent || '').trim()));
+    const wanted = normalize(item.value);
+    const aliases = {
+      maryland: [normalize(PROFILE.stateCode), 'maryland md', 'md maryland', 'us md'],
+      'united states': ['us','usa','united states of america','united states us','united states usa','us united states','usa united states','united states of america usa','u s','u s a'],
+      mobile: ['mobile phone','cell','cell phone','cellular'],
+      linkedin: ['linked in'], '40': ['40 hours','40 hours per week','40 hrs per week']
+    };
+    const extra = wanted === normalize(PROFILE.state) ? [normalize(PROFILE.stateCode)] : wanted === normalize(PROFILE.country) ? [normalize(PROFILE.countryCode)] : [];
+    const acceptable = [wanted, ...(aliases[wanted] || []), ...extra].filter(Boolean);
+    return available.find(o => texts(o).some(t => acceptable.includes(t))) ||
+      (wanted.includes('bachelor') ? available.find(o => normalize(o.textContent).includes('bachelor')) : undefined);
+  }
+  function collectReview() {
+    const proposals = [], attention = [], seen = new Set();
+    for (const el of document.querySelectorAll(reviewSelector)) {
+      if (!isVisible(el) || el.readOnly || el.getAttribute('aria-disabled') === 'true' ||
+        el.closest('#jk-autofill-panel') || ['hidden','submit','button','reset','password'].includes(el.type) && !isCustom(el)) continue;
+      if (currentAnswer(el)) continue;
+      if (el.closest('[role="combobox"]') && el.closest('[role="combobox"]') !== el) continue;
+      if (seen.has(el)) continue;
+      seen.add(el);
+      const label = getLabelText(el) || el.getAttribute('aria-label') || el.placeholder || el.name || el.id || 'Unlabeled field';
+      const item = {el, label: label.trim().slice(0, 300), ...answerFor(el)};
+      if (item.value && el.type !== 'file') {
+        if (el instanceof HTMLSelectElement && !matchingOption([...el.options], item)) {
+          attention.push({...item, reason: 'Saved answer is not an available option'});
+        } else proposals.push(item);
+      } else if (isRequired(el) && !(isChoice(el) && peers(el).some(isChecked))) {
+        attention.push({...item, reason: el.type === 'file' ? 'Choose an upload file' : 'Needs your answer'});
+      }
+    }
+    return {proposals, attention};
+  }
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  async function chooseCustom(item) {
+    const el = item.el;
+    const before = new Set([...document.querySelectorAll('[role="listbox"]')].filter(isVisible));
+    el.click();
+    try {
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const ids = [el.getAttribute('aria-controls'), el.getAttribute('aria-owns')].filter(Boolean).join(' ').split(/\s+/);
+        let lists = ids.map(id => document.getElementById(id)).filter(node => node && isVisible(node));
+        if (!lists.length) lists = [...document.querySelectorAll('[role="listbox"]')].filter(node => isVisible(node) && !before.has(node));
+        if (lists.length === 1) {
+          const options = [...lists[0].querySelectorAll('[role="option"]')].filter(isVisible);
+          const option = matchingOption(options, item);
+          if (option) {
+            option.click();
+            await delay(100);
+            return option.getAttribute('aria-selected') === 'true' ||
+              !!matchingOption([{textContent: el.value || el.textContent}], item);
+          }
+        }
+        await delay(75);
+      }
+      return false;
+    } finally {
+      if (el.getAttribute('aria-expanded') === 'true') {
+        el.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',code:'Escape',bubbles:true}));
+        if (el.getAttribute('aria-expanded') === 'true') el.click();
+      }
+    }
+  }
+  async function applyReviewed(item) {
+    const el = item.el;
+    if (!globalThis.__jamieJobAutofill || !el.isConnected || !isVisible(el) || currentAnswer(el)) return false;
+    const fresh = answerFor(el);
+    if (!fresh || fresh.value !== item.value) return false;
+    if (isChoice(el)) { el.click(); return isChecked(el); }
+    if (isCustom(el)) return chooseCustom(item);
+    if (el instanceof HTMLSelectElement) {
+      const option = matchingOption([...el.options], item);
+      return !!option && setValue(el, option.value);
+    }
+    return setValue(el, item.value) && el.value === item.value;
+  }
+  function showReview() {
+    document.getElementById('jk-review-host')?.remove();
+    const host = document.createElement('div');
+    host.id = 'jk-review-host';
+    host.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483647';
+    const root = host.attachShadow({mode:'closed'});
+    const style = document.createElement('style');
+    style.textContent = ':host{all:initial}section{width:min(480px,90vw);max-height:80vh;overflow:auto;background:white;color:#17233b;border:1px solid #ccd4e0;border-radius:12px;padding:18px;box-shadow:0 8px 32px #0004;font:14px/1.45 system-ui}h2{margin:0 0 8px}button{cursor:pointer;padding:8px 12px;margin:5px;border:1px solid #bcc8da;border-radius:6px;background:#edf2fa;color:#17233b}label{display:block;border-bottom:1px solid #ddd;padding:10px 0}small{display:block;color:#546078;white-space:pre-wrap}input{margin-right:8px}#apply{background:#194e9e;color:white}';
+    root.appendChild(style);
+    const box = document.createElement('section'); root.appendChild(box);
+    const title = document.createElement('h2'); title.textContent = 'Review before filling'; box.appendChild(title);
+    const note = document.createElement('p'); note.textContent = 'Uncheck any answer you do not want filled. Custom dropdown options are checked when you apply. Review each job’s minimum requirements.'; box.appendChild(note);
+    const close = document.createElement('button'); close.textContent = 'Close'; close.onclick = () => host.remove(); box.appendChild(close);
+    const copy = document.createElement('button'); copy.textContent = 'Copy saved answers'; copy.onclick = () => {host.remove();openPanel();}; box.appendChild(copy);
+    const {proposals, attention} = collectReview();
+    const selections = proposals.map(item => {
+      const row = document.createElement('label'), check = document.createElement('input'); check.type = 'checkbox'; check.checked = true;
+      row.append(check, document.createTextNode(item.label));
+      const answer = document.createElement('small'); answer.textContent = item.value; row.appendChild(answer); box.appendChild(row);
+      return {item,check};
+    });
+    const result = document.createElement('p'); result.setAttribute('role','status');
+    result.textContent = `${proposals.length} proposed · ${attention.length} need attention`; box.appendChild(result);
+    const links = document.createElement('div'); box.appendChild(links);
+    function renderAttention(items) {
+      links.replaceChildren();
+      for (const item of items) {
+        const button = document.createElement('button'); button.textContent = `${item.label} — ${item.reason}`;
+        button.onclick = () => { if (!item.el.isConnected) {result.textContent = 'This page changed. Close and reopen the review.'; return;}
+          host.style.display = 'none'; item.el.scrollIntoView({behavior:'smooth',block:'center'}); item.el.focus();
+          item.el.style.outline = '3px solid #d89b00'; };
+        links.appendChild(button);
+      }
+    }
+    renderAttention(attention);
+    const apply = document.createElement('button'); apply.id = 'apply'; apply.textContent = 'Fill selected answers'; apply.disabled = !proposals.length; box.appendChild(apply);
+    apply.onclick = async () => {
+      apply.disabled = true;
+      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {result.textContent = 'Website access was removed.'; return;}
+      let filled = 0; const failures = [], skipped = [];
+      for (const {item,check} of selections) {
+        check.disabled = true;
+        if (!check.checked) {skipped.push({...item,reason:'Skipped in review'});continue;}
+        try { if (await applyReviewed(item)) filled++; else failures.push({...item,reason:'Could not verify filling; review manually'}); }
+        catch { failures.push({...item,reason:'Could not fill; review manually'}); }
+      }
+      const remaining = collectReview().attention;
+      const needs = [...new Map([...remaining,...failures,...skipped].map(item=>[item.el,item])).values()];
+      result.textContent = `${filled} filled · ${needs.length} need review`;
+      renderAttention(needs);
+    };
+    document.body.appendChild(host);
+  }
+  async function fillApplication() {
+    try {
+      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {toast('Whitelist this website first.');return;}
+      await loadSavedProfile();
+      showReview();
+    } catch { toast('Could not load your profile. Reopen the extension and try again.'); }
+  }
+
+  function copyText(
+    text,
+    label
+  ) {
+    navigator.clipboard
+      .writeText(text)
+      .then(
+        () =>
+          toast(
+            `${label} copied.`
+          ),
+        () =>
+          window.prompt(
+            `Copy ${label}:`,
+            text
+          )
+      );
+  }
+
+  function formatJob(job) {
+    return (
+      `${job.title} — ${job.employer}\n` +
+      `${job.location}\n` +
+      `${job.start} – ${job.end}\n` +
+      `${job.description}`
+    );
+  }
+
+  function formatEducation(
+    school
+  ) {
+    return (
+      `${school[0]}\n` +
+      `${school[1]}\n` +
+      `${school[2]}, ${school[3]}`
+    );
+  }
+
+  function escapeProfileText(value) {
+    return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  }
+  function openPanel() {
+    let panel =
+      document.getElementById(
+        'jk-autofill-panel'
+      );
+
+    if (panel) {
+      panel.style.display =
+        'block';
+
+      return;
+    }
+
+    panel =
+      document.createElement(
+        'div'
+      );
+
+    panel.id =
+      'jk-autofill-panel';
+
+    panel.innerHTML = `
+      <div class="jk-head">
+        <strong>Job Autofill</strong>
+        <button type="button" data-close>×</button>
+      </div>
+
+      <button
+        type="button"
+        data-fill
+        class="jk-primary"
+      >
+        Fill this page
+      </button>
+
+      <button
+        type="button"
+        data-highlight
+      >
+        Highlight unanswered required
+      </button>
+
+      <hr>
+
+      <small>
+        COPY COMMON ANSWERS
+      </small>
+
+      <button
+        type="button"
+        data-copy="summary"
+      >
+        Professional summary
+      </button>
+
+      <button
+        type="button"
+        data-copy="skills"
+      >
+        Technical skills
+      </button>
+
+      <button
+        type="button"
+        data-copy="contact"
+      >
+        Contact + links
+      </button>
+
+      <hr>
+
+      <small>
+        WORK HISTORY
+      </small>
+
+      ${PROFILE.jobs
+        .map(
+          (job, index) =>
+            `<button type="button" data-job="${index}">
+              ${escapeProfileText(job.employer)}
+            </button>`
+        )
+        .join('')}
+
+      <hr>
+
+      <small>
+        EDUCATION
+      </small>
+
+      ${PROFILE.education
+        .map(
+          (school, index) =>
+            `<button type="button" data-school="${index}">
+              ${escapeProfileText(school[0])}
+            </button>`
+        )
+        .join('')}
+
+      <p>
+        Never submits the form.
+        Veteran status uses your chosen answer.
+        Other sensitive self-ID questions are left for you.
+      </p>
+    `;
+
+    const style =
+      document.createElement(
+        'style'
+      );
+
+    style.id = 'jk-panel-style';
+    style.textContent = `
+      #jk-autofill-launcher {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 2147483646;
+        border: 0;
+        border-radius: 999px;
+        padding: 11px 16px;
+        background: #222;
+        color: #fff;
+        font: 600 14px Arial, sans-serif;
+        cursor: pointer;
+        box-shadow: 0 4px 18px #0003;
+      }
+
+      #jk-autofill-panel {
+        position: fixed;
+        right: 18px;
+        bottom: 70px;
+        z-index: 2147483647;
+        width: min(
+          330px,
+          calc(100vw - 36px)
+        );
+        max-height: 70vh;
+        overflow: auto;
+        background: #fff;
+        color: #222;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 8px 32px #0004;
+        font: 14px Arial, sans-serif;
+      }
+
+      #jk-autofill-panel .jk-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      #jk-autofill-panel button {
+        display: block;
+        width: 100%;
+        margin: 5px 0;
+        padding: 8px;
+        border: 1px solid #d5d5d5;
+        border-radius: 6px;
+        background: #f7f7f7;
+        color: #222;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      #jk-autofill-panel button[data-close] {
+        width: auto;
+        border: 0;
+        background: transparent;
+        font-size: 20px;
+        padding: 0 5px;
+      }
+
+      #jk-autofill-panel .jk-primary {
+        background: #222;
+        color: #fff;
+        text-align: center;
+        font-weight: 700;
+      }
+
+      #jk-autofill-panel small {
+        font-weight: 700;
+      }
+
+      #jk-autofill-panel p {
+        font-size: 11px;
+        color: #666;
+      }
+
+      #jk-autofill-toast {
+        position: fixed;
+        left: 50%;
+        bottom: 20px;
+        transform: translateX(-50%);
+        z-index: 2147483647;
+        background: #222;
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 7px;
+        font: 13px Arial, sans-serif;
+      }
+    `;
+
+    document.head.appendChild(
+      style
+    );
+
+    document.body.appendChild(
+      panel
+    );
+
+    panel.addEventListener(
+      'click',
+      (event) => {
+        const button =
+          event.target.closest(
+            'button'
+          );
+
+        if (!button) {
+          return;
+        }
+
+        if (
+          button.hasAttribute(
+            'data-close'
+          )
+        ) {
+          panel.style.display =
+            'none';
+        }
+
+        else if (
+          button.hasAttribute(
+            'data-fill'
+          )
+        ) {
+          fillApplication(
+            true
+          );
+        }
+
+        else if (
+          button.hasAttribute(
+            'data-highlight'
+          )
+        ) {
+          highlightRequired();
+
+          toast(
+            'Unanswered required fields highlighted.'
+          );
+        }
+
+        else if (
+          button.dataset.copy ===
+          'summary'
+        ) {
+          copyText(
+            PROFILE.summary,
+            'summary'
+          );
+        }
+
+        else if (
+          button.dataset.copy ===
+          'skills'
+        ) {
+          copyText(
+            PROFILE.skills,
+            'skills'
+          );
+        }
+
+        else if (
+          button.dataset.copy ===
+          'contact'
+        ) {
+          copyText(
+            [
+              PROFILE.fullName,
+              PROFILE.email,
+              PROFILE.phone,
+              PROFILE.portfolio,
+              PROFILE.linkedin,
+              `${PROFILE.city}, ${PROFILE.state}`
+            ].join('\n'),
+            'contact information'
+          );
+        }
+
+        else if (
+          button.dataset.job !==
+          undefined
+        ) {
+          const job =
+            PROFILE.jobs[
+              Number(
+                button.dataset.job
+              )
+            ];
+
+          copyText(
+            formatJob(job),
+            job.employer
+          );
+        }
+
+        else if (
+          button.dataset.school !==
+          undefined
+        ) {
+          const school =
+            PROFILE.education[
+              Number(
+                button.dataset.school
+              )
+            ];
+
+          copyText(
+            formatEducation(
+              school
+            ),
+            school[0]
+          );
+        }
+      }
+    );
+  }
+
+  loadSavedProfile().catch(() => {});
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && (changes.jamieProfile || changes.learnedFields)) {
+      loadSavedProfile().then(() => activeMemoryField && updateMemoryControl(activeMemoryField)).catch(() => {});
+    }
+  });
+  let toastTimer;
+
+  function toast(message) {
+    let node =
+      document.getElementById(
+        'jk-autofill-toast'
+      );
+
+    if (!node) {
+      node =
+        document.createElement(
+          'div'
+        );
+
+      node.id =
+        'jk-autofill-toast';
+
+      document.body.appendChild(
+        node
+      );
+    }
+
+    node.textContent =
+      message;
+
+    node.style.display =
+      'block';
+
+    clearTimeout(
+      toastTimer
+    );
+
+    toastTimer =
+      setTimeout(
+        () => {
+          node.style.display =
+            'none';
+        },
+        3200
+      );
+  }
+
+  function init() {
+    if (
+      document.getElementById(
+        'jk-autofill-launcher'
+      )
+    ) {
+      return;
+    }
+
+    const button =
+      document.createElement(
+        'button'
+      );
+
+    button.id =
+      'jk-autofill-launcher';
+
+    button.type =
+      'button';
+
+    button.textContent =
+      'Review & Fill';
+    button.title = 'Preview your answers before filling';
+    button.addEventListener('contextmenu', event => { event.preventDefault(); openPanel(); });
+
+    button.addEventListener(
+      'click',
+      () => { fillApplication(); }
+    );
+
+    document.body.appendChild(
+      button
+    );
+    installMemoryFieldUI();
+  }
+
+  /*
+   * Tampermonkey menu commands
+   */
+
+  if (
+    typeof GM_registerMenuCommand ===
+    'function'
+  ) {
+    GM_registerMenuCommand(
+      'Fill current application page',
+      () =>
+        fillApplication(
+          true
+        )
+    );
+
+    GM_registerMenuCommand(
+      'Open autofill panel',
+      openPanel
+    );
+
+    GM_registerMenuCommand(
+      'Highlight unanswered required fields',
+      highlightRequired
+    );
+  }
+
+  if (
+    document.readyState ===
+    'loading'
+  ) {
+    document.addEventListener(
+      'DOMContentLoaded',
+      init,
+      {
+        once: true
+      }
+    );
+  } else {
+    init();
+  }
+})();

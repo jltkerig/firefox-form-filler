@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Firefox Form Filler",
+  "version": "1.2.0",
+  "description": "Enable trusted application sites, autofill forms, and learn custom fields from a floating field-side control.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "action": {
+    "default_title": "Firefox Form Filler",
+    "default_popup": "popup.html",
+    "default_icon": "jk-toolbar-v112.svg",
+    "default_area": "navbar"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jamie-job-autofill@local.invalid",
+      "strict_min_version": "128.0"
+    }
+  },
+  "icons": {
+    "16": "jk-toolbar-v112.svg",
+    "32": "jk-toolbar-v112.svg",
+    "48": "jk-toolbar-v112.svg",
+    "96": "jk-toolbar-v112.svg"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

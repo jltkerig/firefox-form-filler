@@ -1,0 +1,18 @@
+# Private configuration and profile exports
+.env
+.env.*
+*.private.*
+profile.json
+profile-*.json
+*-profile.json
+profiles/
+private/
+# Backups and generated packages can contain personal data
+backup/
+backups/
+*.bak
+*.zip
+*.xpi
+dist/
+# Local dependencies
+node_modules/
