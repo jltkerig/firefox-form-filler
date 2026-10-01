@@ -1,0 +1,121 @@
+name: Sign and release Firefox extension
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - updates.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: firefox-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: vars.PUBLISH_SIGNED_XPI == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check release version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./manifest.json').version")
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package only approved extension files
+        run: node scripts/package-extension.mjs
+
+      - name: Check Mozilla signing credentials
+        if: steps.version.outputs.exists == 'false'
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          if [ -z "$AMO_JWT_ISSUER" ] || [ -z "$AMO_JWT_SECRET" ]; then
+            echo 'Set AMO_JWT_ISSUER and AMO_JWT_SECRET as repository Actions secrets before releasing.' >&2
+            exit 1
+          fi
+
+      - name: Sign with Mozilla
+        if: steps.version.outputs.exists == 'false'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          npx --yes web-ext@10 sign \
+            --channel=unlisted \
+            --source-dir=.build/extension \
+            --artifacts-dir=.build/artifacts
+          mapfile -t signed < <(find .build/artifacts -maxdepth 1 -type f -name '*.xpi')
+          if [ "${#signed[@]}" -ne 1 ]; then
+            echo 'Expected exactly one Mozilla-signed XPI.' >&2
+            exit 1
+          fi
+          mv "${signed[0]}" ".build/artifacts/firefox-form-filler-v${{ steps.version.outputs.value }}.xpi"
+
+      - name: Publish signed release
+        if: steps.version.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version='${{ steps.version.outputs.value }}'
+          gh release create "v$version" \
+            ".build/artifacts/firefox-form-filler-v$version.xpi" \
+            --target "$GITHUB_SHA" \
+            --title "Firefox Form Filler v$version" \
+            --notes 'Mozilla-signed Firefox extension. Download and install the XPI from Firefox Add-ons Manager.'
+
+      - name: Download existing signed release on rerun
+        if: steps.version.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .build/artifacts
+          version='${{ steps.version.outputs.value }}'
+          gh release download "v$version" \
+            --pattern "firefox-form-filler-v$version.xpi" \
+            --dir .build/artifacts
+
+      - name: Verify signed package and update feed
+        run: |
+          version='${{ steps.version.outputs.value }}'
+          xpi=".build/artifacts/firefox-form-filler-v$version.xpi"
+          unzip -t "$xpi" >/dev/null
+          unzip -p "$xpi" manifest.json | node -e '
+            let data=""; process.stdin.on("data", chunk=>data+=chunk);
+            process.stdin.on("end",()=>{
+              const manifest=JSON.parse(data);
+              if(manifest.version!==process.env.EXPECTED_VERSION ||
+                 manifest.browser_specific_settings?.gecko?.id!=="jamie-job-autofill@local.invalid")
+                process.exit(1);
+            });
+          '
+          node scripts/update-feed.mjs "$xpi"
+        env:
+          EXPECTED_VERSION: ${{ steps.version.outputs.value }}
+
+      - name: Publish update feed
+        run: |
+          if git diff --quiet -- updates.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add updates.json
+          git commit -m "Publish Firefox update v${{ steps.version.outputs.value }}"
+          git push origin HEAD:main

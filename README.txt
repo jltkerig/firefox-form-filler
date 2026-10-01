@@ -1,6 +1,36 @@
-FIREFOX FORM FILLER - VERSION 1.2.0
+FIREFOX FORM FILLER - VERSION 1.2.1
 
-INSTALL / UPDATE
+SIGNED RELEASE AND AUTOMATIC UPDATES
+After the repository owner authorizes publishing a signed XPI and configures
+the release workflow, download the signed .xpi from this repository's Releases
+page. In Firefox Add-ons Manager, choose Install Add-on From File and select it.
+The extension checks the HTTPS updates.json feed for higher signed versions.
+Pushing source code by itself does not install or update an extension.
+
+Release setup for the repository owner:
+1. Obtain an explicit exception to AGENTS.md rules 9 and 10 for publishing
+   signed XPI release assets and storing Mozilla signing credentials in this
+   repository's protected Actions secrets. Keep a separate protected local
+   backup of those credentials. Never place them in source, issues, or logs.
+2. Create Mozilla Add-ons developer API credentials. Add the issuer and secret
+   as Actions secrets AMO_JWT_ISSUER and AMO_JWT_SECRET. Set the repository
+   Actions variable PUBLISH_SIGNED_XPI to true only after that approval.
+3. Push a new manifest.json version to main. The workflow packages only the
+   extension files, submits them to Mozilla for unlisted signing, creates a
+   GitHub release with the signed XPI, and publishes its URL and SHA-256 hash
+   in updates.json. Each later release needs a higher manifest version.
+4. Install the signed XPI once. Temporary add-ons loaded through about:debugging
+   do not provide a durable installation or automatic updates.
+
+Before replacing a temporary installation that contains answers, preserve
+those answers separately. Firefox can clear extension storage when an add-on
+is removed; this project's file backup does not include Firefox storage.
+
+The source code and documentation are already on GitHub. Signing requires
+Mozilla's service and can be delayed by review. The workflow does not publish
+an XPI until the repository variable and signing credentials are configured.
+
+TEMPORARY DEVELOPMENT INSTALL
 1. Open about:debugging#/runtime/this-firefox in Firefox 128 or newer.
 2. For an already loaded add-on, use Reload to preserve its local profile.
 3. Click Load Temporary Add-on and choose the new ZIP. You can alternatively
@@ -8,8 +38,8 @@ INSTALL / UPDATE
 4. Refresh application tabs to replace the old page controls.
 5. Disable the original Tampermonkey userscript to avoid duplicate buttons.
 
-This unsigned add-on lasts until Firefox restarts. Permanent installation in
-standard Firefox requires Mozilla signing, which has not been performed.
+This unsigned development add-on lasts until Firefox restarts. Permanent
+installation in standard Firefox requires Mozilla signing.
 
 WHITELIST
 Click the JK toolbar icon and choose Whitelist this website. The floating

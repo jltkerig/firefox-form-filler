@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Firefox Form Filler",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Enable trusted application sites, autofill forms, and learn custom fields from a floating field-side control.",
   "permissions": [
     "activeTab",
@@ -25,7 +25,8 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "jamie-job-autofill@local.invalid",
-      "strict_min_version": "128.0"
+      "strict_min_version": "128.0",
+      "update_url": "https://raw.githubusercontent.com/jltkerig/firefox-form-filler/main/updates.json"
     }
   },
   "icons": {

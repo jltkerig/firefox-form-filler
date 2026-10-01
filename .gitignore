@@ -14,5 +14,7 @@ backups/
 *.zip
 *.xpi
 dist/
+.build/
+web-ext-artifacts/
 # Local dependencies
 node_modules/
