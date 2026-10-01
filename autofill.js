@@ -1471,7 +1471,7 @@
   function isMemoryUnsafe(el) {
     if (!el || el.type === 'password' || el.type === 'file' || el.type === 'hidden') return true;
     const desc = `${getDescriptor(el)} ${memoryQuestionText(el)}`;
-    return isWorkHistoryPage() || isConsentQuestion(el) || memoryUnsafeTerms.some(term => desc.includes(term)) ||
+    return isRecordDetailsPage() || isConsentQuestion(el) || memoryUnsafeTerms.some(term => desc.includes(term)) ||
       /\b(?:last|final|ending)\s*(?:4|four)\b/.test(desc);
   }
 
@@ -1698,14 +1698,18 @@
     const question = normalize([group?.querySelector('legend')?.textContent || '',
       group?.getAttribute('aria-label') || ''].join(' '));
     const legalTerms = /\b(?:electronic consent|terms and conditions|state disclosures?|dispute resolution (?:program|policy)|arbitration agreement|application agreement)\b/;
+    if (choice === 'i understand and agree to the terms outlined above' &&
+        /\b(?:omission|misrepresentation|falsification)\b/.test(question)) return true;
     if (legalTerms.test(choice) || /\bi (?:acknowledge|certify) that i (?:have )?(?:read|understand)\b|\bi do not agree and wish to end\b/.test(choice)) return true;
     if (!/^i (?:agree|accept|consent|acknowledge|certify)$/.test(choice)) return false;
     if (legalTerms.test(question)) return true;
     return el.type === 'radio' && peers(el).some(other =>
       other !== el && /\bi do not agree and wish to end\b/.test(directLabel(other)));
   }
-  function isWorkHistoryPage() {
-    return /\b(?:work|employment) history\b/.test(normalize(document.title));
+  function isRecordDetailsPage() {
+    const title = normalize(document.title);
+    return /\b(?:work|employment) history\b/.test(title) ||
+      /^(?:previous address|education) application for employment\b/.test(title);
   }
   function isWorkPreferenceQuestion(el) {
     return el.type === 'radio' && /^work preference$/.test(normalize(
@@ -1736,9 +1740,9 @@
   function answerFor(el) {
     const direct = directLabel(el);
     const desc = contextLabel(el);
-    // A previous employer's address, phone, and dates are not the applicant's.
-    // Repeated job records also make learned field IDs unsafe to reuse here.
-    if (isWorkHistoryPage() || /\bminimally acceptable rate of pay\b/.test(direct)) return null;
+    // Previous addresses, schools, and employers are distinct records. Generic
+    // applicant fields and learned IDs cannot safely identify the right one.
+    if (isRecordDetailsPage() || /\bminimally acceptable rate of pay\b/.test(direct)) return null;
     // Legal acknowledgements require a fresh, manual decision on each page.
     if (isConsentQuestion(el)) return null;
     if (isWorkPreferenceQuestion(el) && OPTIONAL.employmentType) return workPreferenceAnswer(el);
@@ -1865,7 +1869,8 @@
         if (groupKey && attentionGroups.has(groupKey)) continue;
         if (groupKey) attentionGroups.add(groupKey);
         const groupLabel = group?.querySelector('legend')?.textContent?.trim();
-        const reason = el.type === 'file' ? 'Choose an upload file' : /\bminimally acceptable rate of pay\b/.test(directLabel(el)) ?
+        const reason = el.type === 'file' ? 'Choose an upload file' : isRecordDetailsPage() ?
+          'Verify this record manually' : /\bminimally acceptable rate of pay\b/.test(directLabel(el)) ?
           'Review the minimum pay for this job' : isConsentQuestion(el) ?
           'Review this agreement manually' : !isRequired(el) && isEeoQuestion(el) ?
           'Optional self-ID; choose whether to answer' : 'Needs your answer';
