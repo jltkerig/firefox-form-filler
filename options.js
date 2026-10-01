@@ -3,6 +3,9 @@ const status = document.getElementById('status');
 const controls = [];
 const jobControls = [], schoolControls = [];
 const friendly = {
+  eeoGender:'EEO gender (exact choice shown on applications)',
+  eeoHispanicLatino:'EEO Hispanic or Latino (Yes, No, or exact choice)',
+  eeoRace:'EEO race (exact choice shown on applications)',
   ssnLastFour:'Last four digits of Social Security Number',
   authorizedToWork:'Legally authorized to work', requiresSponsorship:'Requires sponsorship',
   desiredHoursPerWeek:'Preferred hours per week', referralSource:'How you heard about the job',

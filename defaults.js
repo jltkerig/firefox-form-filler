@@ -25,6 +25,9 @@ globalThis.JAMIE_DEFAULTS = {
     "education": []
   },
   "optional": {
+    "eeoGender": "",
+    "eeoHispanicLatino": "",
+    "eeoRace": "",
     "ssnLastFour": "",
     "meetsListedMinimumRequirements": "",
     "currentlyAnEmployee": "",

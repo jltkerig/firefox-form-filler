@@ -71,6 +71,9 @@
    */
 
   const OPTIONAL = {
+    "eeoGender": "",
+    "eeoHispanicLatino": "",
+    "eeoRace": "",
     "ssnLastFour": "",
     "meetsListedMinimumRequirements": "",
     "currentlyAnEmployee": "",
@@ -111,6 +114,10 @@
     'race',
     'ethnicity',
     'ethnic',
+    'hispanic',
+    'latino',
+    'latina',
+    'latinx',
     'gender',
     'sexual orientation',
     'veteran',
@@ -1368,7 +1375,8 @@
     'driver’s license', 'passport',
     'date of birth', 'birth date', 'birthdate', 'dateofbirth', 'dob',
     'national id', 'taxpayer id', 'tax id', 'social insurance',
-    'race', 'ethnicity', 'gender', 'sexual orientation', 'disability',
+    'race', 'ethnicity', 'hispanic', 'latino', 'latina', 'latinx',
+    'gender', 'sexual orientation', 'disability',
     'religion', 'marital status', 'veteran status', 'cc-number', 'cc-csc',
     'bday'
   ];
@@ -1653,9 +1661,38 @@
     const group = el.closest('fieldset,[role="radiogroup"],[role="group"],.form-group,.question,.field');
     return normalize([directLabel(el), group?.innerText || '', el.getAttribute('autocomplete') || ''].join(' '));
   }
+  function eeoQuestion(el) {
+    const group = el.closest('fieldset,[role="radiogroup"],[role="group"],.question,.form-group,.field');
+    const legend = group?.querySelector('legend');
+    const labelledBy = group?.getAttribute('aria-labelledby') || '';
+    const labelledText = labelledBy.split(/\s+/).map(id => document.getElementById(id)?.textContent || '').join(' ');
+    const groupLabel = group?.getAttribute('aria-label') || '';
+    // The option's label is an answer, not evidence of what the question asks.
+    return normalize([legend?.textContent || '', labelledText, groupLabel,
+      isChoice(el) ? '' : directLabel(el)].filter(Boolean).join(' '));
+  }
+  function isEeoQuestion(el) {
+    return /\b(?:hispanic|latino|latina|latinx|race|racial|gender|sex assigned at birth)\b/.test(eeoQuestion(el));
+  }
+  function eeoAnswer(el) {
+    const question = eeoQuestion(el);
+    let saved = '';
+    if (/\b(?:hispanic|latino|latina|latinx)\b/.test(question)) saved = OPTIONAL.eeoHispanicLatino;
+    else if (/\b(?:race|racial)\b/.test(question)) saved = OPTIONAL.eeoRace;
+    else if (/\b(?:gender|sex assigned at birth)\b/.test(question)) saved = OPTIONAL.eeoGender;
+    if (!String(saved || '').trim()) return null;
+    if (isChoice(el)) {
+      if (peers(el).some(isChecked)) return null;
+      const choice = normalize(directLabel(el));
+      if (choice !== normalize(saved)) return null;
+    }
+    return {value: String(saved).trim()};
+  }
   function answerFor(el) {
     const direct = directLabel(el);
     const desc = contextLabel(el);
+    const eeo = eeoAnswer(el);
+    if (eeo) return eeo;
     const learned = findLearnedField(el);
     if (learned && learned.answer) {
       const wanted = normalize(learned.answer);
@@ -1729,7 +1766,7 @@
         if (el instanceof HTMLSelectElement && !matchingOption([...el.options], item)) {
           attention.push({...item, reason: 'Saved answer is not an available option'});
         } else proposals.push(item);
-      } else if (isRequired(el) && !(isChoice(el) && peers(el).some(isChecked))) {
+      } else if ((isRequired(el) || isEeoQuestion(el)) && !(isChoice(el) && peers(el).some(isChecked))) {
         const group = el.type === 'radio' ? el.closest('fieldset,[role="radiogroup"],[role="group"]') : null;
         const groupKey = group || (el.type === 'radio' && el.name ? `${el.form?.id || ''}:${el.name}` : null);
         if (groupKey && attentionGroups.has(groupKey)) continue;
