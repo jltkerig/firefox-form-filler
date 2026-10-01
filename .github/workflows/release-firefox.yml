@@ -31,7 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version=$(node -p "require('./manifest.json').version")
+          version=$(node -e "const v=require('./manifest.json').version; if (!/^\d+\.\d+\.\d+(?:\.\d+)?$/.test(v)) process.exit(1); process.stdout.write(v)")
           echo "value=$version" >> "$GITHUB_OUTPUT"
           if gh release view "v$version" >/dev/null 2>&1; then
             echo 'exists=true' >> "$GITHUB_OUTPUT"
@@ -59,7 +59,7 @@ jobs:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
-          npx --yes web-ext@10 sign \
+          npx --yes web-ext@10.5.0 sign \
             --channel=unlisted \
             --source-dir=.build/extension \
             --artifacts-dir=.build/artifacts

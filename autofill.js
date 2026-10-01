@@ -1358,7 +1358,13 @@
   const memoryUnsafeTerms = [
     'password', 'passcode', 'pin', 'social security', 'ssn', 'bank account',
     'routing number', 'credit card', 'debit card', 'card number', 'cvv', 'cvc',
-    'security code', 'driver license', 'drivers license', 'passport number'
+    'security code', 'driver license', 'drivers license', "driver's license",
+    'driver’s license', 'passport',
+    'date of birth', 'birth date', 'birthdate', 'dateofbirth', 'dob',
+    'national id', 'taxpayer id', 'tax id', 'social insurance',
+    'race', 'ethnicity', 'gender', 'sexual orientation', 'disability',
+    'religion', 'marital status', 'veteran status', 'cc-number', 'cc-csc',
+    'bday'
   ];
 
   function memoryQuestionText(el) {
@@ -1405,6 +1411,10 @@
 
   function learnedMatchScore(saved, el) {
     const current = memoryIdentity(el);
+    // A shared technical field name is not enough to reuse a different answer.
+    if (saved.question && current.question && saved.question !== current.question) return 0;
+    if (saved.host && current.host && saved.host !== current.host &&
+        (!saved.question || !current.question)) return 0;
     let score = 0;
     if (saved.host && saved.host === current.host) score += 1;
     if (saved.name && current.name && saved.name === current.name) score += 5;
@@ -1418,6 +1428,7 @@
   }
 
   function findLearnedField(el) {
+    if (isMemoryUnsafe(el)) return null;
     let best = null;
     let bestScore = 0;
     for (const saved of LEARNED_FIELDS) {
@@ -1429,8 +1440,9 @@
 
   function isMemoryUnsafe(el) {
     if (!el || el.type === 'password' || el.type === 'file' || el.type === 'hidden') return true;
-    const desc = getDescriptor(el);
-    return memoryUnsafeTerms.some(term => desc.includes(term));
+    const desc = `${getDescriptor(el)} ${memoryQuestionText(el)}`;
+    return memoryUnsafeTerms.some(term => desc.includes(term)) ||
+      /\b(?:last|final|ending)\s*(?:4|four)\b/.test(desc);
   }
 
   function choiceGroup(el) {
@@ -1939,7 +1951,7 @@
         .map(
           (job, index) =>
             `<button type="button" data-job="${index}">
-              ${escapeProfileText(job.employer)}
+              Job ${index + 1}
             </button>`
         )
         .join('')}
@@ -1954,7 +1966,7 @@
         .map(
           (school, index) =>
             `<button type="button" data-school="${index}">
-              ${escapeProfileText(school[0])}
+              School ${index + 1}
             </button>`
         )
         .join('')}
