@@ -1461,7 +1461,7 @@
   function isMemoryUnsafe(el) {
     if (!el || el.type === 'password' || el.type === 'file' || el.type === 'hidden') return true;
     const desc = `${getDescriptor(el)} ${memoryQuestionText(el)}`;
-    return isConsentQuestion(el) || memoryUnsafeTerms.some(term => desc.includes(term)) ||
+    return isWorkHistoryPage() || isConsentQuestion(el) || memoryUnsafeTerms.some(term => desc.includes(term)) ||
       /\b(?:last|final|ending)\s*(?:4|four)\b/.test(desc);
   }
 
@@ -1693,6 +1693,17 @@
     return el.type === 'radio' && peers(el).some(other =>
       other !== el && /\bi do not agree and wish to end\b/.test(directLabel(other)));
   }
+  function isWorkHistoryPage() {
+    return /\b(?:work|employment) history\b/.test(normalize(document.title));
+  }
+  function isWorkPreferenceQuestion(el) {
+    return el.type === 'radio' && /^work preference$/.test(normalize(
+      el.closest('fieldset,[role="radiogroup"]')?.querySelector('legend')?.textContent));
+  }
+  function workPreferenceAnswer(el) {
+    if (!isWorkPreferenceQuestion(el) || !OPTIONAL.employmentType || peers(el).some(isChecked)) return null;
+    return directLabel(el) === normalize(OPTIONAL.employmentType) ? {value: OPTIONAL.employmentType} : null;
+  }
   function eeoAnswer(el) {
     const question = eeoQuestion(el);
     const categories = [
@@ -1714,8 +1725,12 @@
   function answerFor(el) {
     const direct = directLabel(el);
     const desc = contextLabel(el);
+    // A previous employer's address, phone, and dates are not the applicant's.
+    // Repeated job records also make learned field IDs unsafe to reuse here.
+    if (isWorkHistoryPage() || /\bminimally acceptable rate of pay\b/.test(direct)) return null;
     // Legal acknowledgements require a fresh, manual decision on each page.
     if (isConsentQuestion(el)) return null;
+    if (isWorkPreferenceQuestion(el) && OPTIONAL.employmentType) return workPreferenceAnswer(el);
     const eeo = eeoAnswer(el);
     if (eeo) return eeo;
     const learned = findLearnedField(el);
@@ -1792,12 +1807,16 @@
           attention.push({...item, reason: 'Saved answer is not an available option'});
         } else proposals.push(item);
       } else if ((isRequired(el) || isEeoQuestion(el) || isConsentQuestion(el)) && !(isChoice(el) && peers(el).some(isChecked))) {
-        const group = el.type === 'radio' ? el.closest('fieldset,[role="radiogroup"],[role="group"]') : null;
+        const choiceGroup = el.closest('fieldset,[role="radiogroup"],[role="group"]');
+        const availabilityDays = el.type === 'checkbox' && /\bdays and times you are available to work\b/.test(
+          normalize(choiceGroup?.querySelector('legend')?.textContent));
+        const group = el.type === 'radio' || availabilityDays ? choiceGroup : null;
         const groupKey = group || (el.type === 'radio' && el.name ? `${el.form?.id || ''}:${el.name}` : null);
         if (groupKey && attentionGroups.has(groupKey)) continue;
         if (groupKey) attentionGroups.add(groupKey);
         const groupLabel = group?.querySelector('legend')?.textContent?.trim();
-        const reason = el.type === 'file' ? 'Choose an upload file' : isConsentQuestion(el) ?
+        const reason = el.type === 'file' ? 'Choose an upload file' : /\bminimally acceptable rate of pay\b/.test(directLabel(el)) ?
+          'Review the minimum pay for this job' : isConsentQuestion(el) ?
           'Review this agreement manually' : !isRequired(el) && isEeoQuestion(el) ?
           'Optional self-ID; choose whether to answer' : 'Needs your answer';
         attention.push({...item, label: (groupLabel || item.label).slice(0, 300),
