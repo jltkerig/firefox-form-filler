@@ -91,4 +91,6 @@ These rules replace all earlier versions of these protection rules. Preserve exi
 
 24. After completing a task, report changed files, verification results, and backup status. Clearly identify anything the backups do not cover.
 
+25. During every project task, look for data leaks and security flaws in the affected code and directly related paths. Check how untrusted page content, saved answers, permissions, local storage, clipboard use, and build or release steps could expose private data or change application behavior. Verify concrete findings where practical, fix issues within the authorized scope under the backup and confirmation rules, and report any remaining risks with file locations and their likely impact. Do not describe a source review as a live security test.
+
 These rules are instructions, not a technical guarantee. Repository access must also be restricted through account permissions and local filesystem permissions where available. Do not describe these instructions as making unauthorized access or data loss impossible.
