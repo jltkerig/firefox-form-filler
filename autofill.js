@@ -1904,8 +1904,8 @@
       el.getAttribute('pattern'), getLabelText(el)].filter(Boolean).join(' ');
     let preferred = [];
     if (/\+1[\s().-]*\(?\d|international|e\.164/i.test(hint)) preferred = [formats.international, formats.internationalSpaced];
-    else if (/\(\d{3}\)[\s.-]*\d{3}/.test(hint)) preferred = [formats.parenthesized];
-    else if (/\d{3}-\d{3}-\d{4}/.test(hint)) preferred = [formats.dashed];
+    else if (/\((?:\d{3}|_{3})\)[\s.-]*(?:\d{3}|_{3})/.test(hint)) preferred = [formats.parenthesized];
+    else if (/(?:\d{3}|_{3})-(?:\d{3}|_{3})-(?:\d{4}|_{4})/.test(hint)) preferred = [formats.dashed];
     else if (/\d{3} \d{3} \d{4}/.test(hint)) preferred = [formats.spaced];
     else if (/digits? only|numbers? only|10 digits?|numeric/i.test(hint)) preferred = [formats.digits];
     const candidates = [...new Set([...preferred, saved, ...Object.values(formats)])];
