@@ -96,6 +96,7 @@
     "teamInterest": "",
     "interestedFunctions": "",
     "technicalSkillAreas": "",
+    "coverLetter": "",
     "certifications": "",
     "showreelUrl": "",
     "desiredHoursPerWeek": "",
@@ -488,6 +489,7 @@
    * FIELD MATCHING RULES
    */
 
+  const phoneValue = () => PROFILE.phone;
   const RULES = [
     [
       () => PROFILE.phoneDeviceType,
@@ -565,7 +567,7 @@
     ],
 
     [
-      () => PROFILE.phone,
+      phoneValue,
       [
         /\bphone\b/,
         /\bmobile\b/,
@@ -711,6 +713,13 @@
         /\bcareer summary\b/,
         /\babout you\b/
       ],
+      [],
+      true
+    ],
+
+    [
+      () => OPTIONAL.coverLetter,
+      [/^cover letter(?: text| message)?$/, /^application letter$/],
       [],
       true
     ],
@@ -1834,12 +1843,67 @@
       /\btel country code\b/.test(normalize(el.getAttribute('autocomplete'))) ||
       (/\b(?:phone|mobile|telephone)\b/.test(direct) && /\b(?:country|prefix|code)\b/.test(direct)))
       return PROFILE.phoneCountryCode ? {value: PROFILE.phoneCountryCode, phoneCode: true} : null;
+    const phonePart = phonePartAnswer(el);
+    if (phonePart) return {value: phonePart};
     // Match the question itself, not the option names in its dropdown.
     const yesNo = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(direct)));
     const rule = yesNo || RULES.find(([, patterns, excludes = [], textareaOnly = false]) =>
       (!textareaOnly || el instanceof HTMLTextAreaElement) && !excludes.some(rx => rx.test(direct)) && patterns.some(rx => rx.test(direct)));
     const value = rule?.[0]();
+    if (rule?.[0] === phoneValue) {
+      const formatted = phoneAnswer(el);
+      return formatted ? {value: formatted} : null;
+    }
     return value ? {value: String(value)} : null;
+  }
+  function phoneAnswer(el) {
+    const saved = String(PROFILE.phone || '').trim();
+    if (!saved || !(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return null;
+    const digits = saved.replace(/\D/g, '');
+    const country = String(PROFILE.phoneCountryCode || '').replace(/\D/g, '');
+    const national = digits.length === 10 ? digits :
+      country === '1' && digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : '';
+    if (!national || (country && country !== '1')) return candidateFits(el, saved) ? saved : null;
+    const area = national.slice(0, 3), exchange = national.slice(3, 6), line = national.slice(6);
+    const formats = {
+      digits: national,
+      dashed: `${area}-${exchange}-${line}`,
+      spaced: `${area} ${exchange} ${line}`,
+      parenthesized: `(${area}) ${exchange}-${line}`,
+      international: `+1${national}`,
+      internationalSpaced: `+1 ${area} ${exchange} ${line}`
+    };
+    const hint = [el.placeholder, el.getAttribute('aria-label'), el.getAttribute('title'),
+      el.getAttribute('pattern'), getLabelText(el)].filter(Boolean).join(' ');
+    let preferred = [];
+    if (/\+1[\s().-]*\(?\d|international|e\.164/i.test(hint)) preferred = [formats.international, formats.internationalSpaced];
+    else if (/\(\d{3}\)[\s.-]*\d{3}/.test(hint)) preferred = [formats.parenthesized];
+    else if (/\d{3}-\d{3}-\d{4}/.test(hint)) preferred = [formats.dashed];
+    else if (/\d{3} \d{3} \d{4}/.test(hint)) preferred = [formats.spaced];
+    else if (/digits? only|numbers? only|10 digits?|numeric/i.test(hint)) preferred = [formats.digits];
+    const candidates = [...new Set([...preferred, saved, ...Object.values(formats)])];
+    const valid = candidates.filter(candidate => candidateFits(el, candidate));
+    // A permissive field gives no evidence that changing punctuation is needed.
+    return valid.includes(saved) && !preferred.length ? saved : valid[0] || null;
+  }
+  function phonePartAnswer(el) {
+    if (!(el instanceof HTMLInputElement)) return null;
+    const token = String(el.getAttribute('autocomplete') || '').trim().split(/\s+/).at(-1);
+    if (!/^tel-(?:national|area-code|local|local-prefix|local-suffix)$/.test(token)) return null;
+    const saved = String(PROFILE.phone || '').replace(/\D/g, '');
+    const country = String(PROFILE.phoneCountryCode || '').replace(/\D/g, '');
+    if (country && country !== '1') return null;
+    const national = saved.length === 10 ? saved :
+      country === '1' && saved.length === 11 && saved.startsWith('1') ? saved.slice(1) : '';
+    if (!national) return null;
+    const parts = {
+      'tel-national': national,
+      'tel-area-code': national.slice(0, 3),
+      'tel-local': national.slice(3),
+      'tel-local-prefix': national.slice(3, 6),
+      'tel-local-suffix': national.slice(6)
+    };
+    return candidateFits(el, parts[token]) ? parts[token] : null;
   }
   function matchingOption(options, item) {
     const available = options.filter(o => !o.disabled && o.getAttribute?.('aria-disabled') !== 'true' && !o.parentElement?.disabled);

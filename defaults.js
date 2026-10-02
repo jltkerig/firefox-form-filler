@@ -50,6 +50,7 @@ globalThis.JAMIE_DEFAULTS = {
     "teamInterest": "",
     "interestedFunctions": "",
     "technicalSkillAreas": "",
+    "coverLetter": "",
     "certifications": "",
     "showreelUrl": "",
     "desiredHoursPerWeek": "",
