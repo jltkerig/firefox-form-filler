@@ -36,6 +36,7 @@
   const PROFILE = {
     "firstName": "",
     "preferredName": "",
+    "namePronunciation": "",
     "lastName": "",
     "fullName": "",
     "email": "",
@@ -78,6 +79,7 @@
     "meetsListedMinimumRequirements": "",
     "currentlyAnEmployee": "",
     "veteranStatus": "",
+    "hasServedInMilitary": "",
     "streetAddress": "",
     "addressLine2": "",
     "zipCode": "",
@@ -96,6 +98,7 @@
     "teamInterest": "",
     "interestedFunctions": "",
     "technicalSkillAreas": "",
+    "spokenLanguages": "",
     "coverLetter": "",
     "certifications": "",
     "showreelUrl": "",
@@ -519,6 +522,11 @@
         /\bpreferred.*name\b/,
         /\bnickname\b/
       ]
+    ],
+
+    [
+      () => PROFILE.namePronunciation,
+      [/\bname pronunciation\b/, /\bpronounce your name\b/]
     ],
 
     [
@@ -1727,7 +1735,26 @@
       isChoice(el) ? '' : directLabel(el)].filter(Boolean).join(' '));
   }
   function isEeoQuestion(el) {
-    return /\b(?:hispanic|latino|latina|latinx|race|racial|ethnicity|gender|sex assigned at birth)\b/.test(eeoQuestion(el));
+    return /\b(?:hispanic|latino|latina|latinx|race|racial|ethnicity|gender|sex assigned at birth|veteran status|protected veteran)\b/.test(eeoQuestion(el)) ||
+      isGeneralVeteranQuestion(el);
+  }
+  function isGeneralVeteranQuestion(el) {
+    const question = eeoQuestion(el);
+    return /^(?:are you (?:a |an )?(?:military )?veteran|have you (?:ever )?served in (?:the )?(?:us |u s )?(?:military|armed forces))(?: select one)?$/.test(question);
+  }
+  function veteranAnswer(el) {
+    const question = eeoQuestion(el);
+    if (isGeneralVeteranQuestion(el)) {
+      const saved = OPTIONAL.hasServedInMilitary;
+      if (!['Yes', 'No'].includes(saved) || el.type === 'checkbox') return null;
+      if (isChoice(el)) return !peers(el).some(isChecked) && choiceLabelText(el) === normalize(saved) ? {value: saved} : null;
+      return {value: saved};
+    }
+    if (!/\bveteran status\b|\bprotected veteran\b|\bmilitary veteran status\b/.test(question)) return null;
+    const saved = String(OPTIONAL.veteranStatus || '').trim();
+    if (!saved) return null;
+    if (isChoice(el)) return !peers(el).some(isChecked) && choiceLabelText(el) === normalize(saved) ? {value: saved} : null;
+    return {value: saved};
   }
   function isConsentQuestion(el) {
     if (!isChoice(el)) return false;
@@ -1766,7 +1793,8 @@
       [/\b(?:leadership roles|leadership preference|individual contributor roles)\b/, OPTIONAL.leadershipPreference, false],
       [/\b(?:what team or area are you most interested in|team or area most interested in)\b/, OPTIONAL.teamInterest, false],
       [/\b(?:which functions are you interested in working|functions are you interested in working)\b/, OPTIONAL.interestedFunctions, true],
-      [/\b(?:technical or functional skill areas|select your skill areas)\b/, OPTIONAL.technicalSkillAreas, true]
+      [/\b(?:technical or functional skill areas|select your skill areas)\b/, OPTIONAL.technicalSkillAreas, true],
+      [/\b(?:language skill(?:s| s)?|languages spoken|which languages do you speak|languages you speak)\b/, OPTIONAL.spokenLanguages, true]
     ].filter(([pattern]) => pattern.test(question));
     if (rules.length > 1 || rules.length && isSensitive(question)) return null;
     if (!rules.length || !String(rules[0][1] || '').trim()) return undefined;
@@ -1809,6 +1837,7 @@
     if (configuredChoice !== undefined) return configuredChoice;
     const eeo = eeoAnswer(el);
     if (eeo) return eeo;
+    if (isGeneralVeteranQuestion(el) || /\bveteran status\b|\bprotected veteran\b/.test(eeoQuestion(el))) return veteranAnswer(el);
     const learned = findLearnedField(el);
     if (learned && learned.answer) {
       const wanted = normalize(learned.answer);
@@ -1823,7 +1852,6 @@
     }
     if (isChoice(el)) {
       if (peers(el).some(isChecked)) return null;
-      if (isChosenVeteranAnswer(direct)) return {value: OPTIONAL.veteranStatus};
       if (isSensitive(desc)) return null;
       if (el.type === 'checkbox' && /^(?:mobile|cell(?:ular)?)(?: phone)?(?: number)?$/.test(direct) &&
           normalize(PROFILE.phoneDeviceType) === 'mobile') return {value: 'Yes'};
@@ -1831,7 +1859,6 @@
       const rule = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(desc)));
       return rule && normalize(rule[0]()) === direct ? {value: rule[0]()} : null;
     }
-    if (/\bveteran\b/.test(direct)) return {value: OPTIONAL.veteranStatus};
     if (/\b(?:ssn|social security(?: number)?)\b/.test(direct) &&
       /\b(?:last|final|ending) (?:4|four)(?: digits?)?\b/.test(direct) &&
       !/\b(?:full|entire|complete|nine|9)\b/.test(direct)) {

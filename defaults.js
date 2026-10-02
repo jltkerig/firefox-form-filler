@@ -2,6 +2,7 @@ globalThis.JAMIE_DEFAULTS = {
   "profile": {
     "firstName": "",
     "preferredName": "",
+    "namePronunciation": "",
     "lastName": "",
     "fullName": "",
     "email": "",
@@ -32,6 +33,7 @@ globalThis.JAMIE_DEFAULTS = {
     "meetsListedMinimumRequirements": "",
     "currentlyAnEmployee": "",
     "veteranStatus": "",
+    "hasServedInMilitary": "",
     "streetAddress": "",
     "addressLine2": "",
     "zipCode": "",
@@ -50,6 +52,7 @@ globalThis.JAMIE_DEFAULTS = {
     "teamInterest": "",
     "interestedFunctions": "",
     "technicalSkillAreas": "",
+    "spokenLanguages": "",
     "coverLetter": "",
     "certifications": "",
     "showreelUrl": "",

@@ -6,11 +6,14 @@ const friendly = {
   eeoGender:'EEO gender (exact choice shown on applications)',
   eeoHispanicLatino:'EEO Hispanic or Latino (Yes, No, or exact choice)',
   eeoRace:'EEO race (exact choice shown on applications)',
+  namePronunciation:'Name pronunciation (optional)',
+  hasServedInMilitary:'Are you a veteran / have you served in the military? (Yes or No; separate from protected-veteran status)',
   expectedDayRate:'Expected day rate (leave blank if it varies by job)',
   leadershipPreference:'Leadership or individual contributor preference (exact choice)',
   teamInterest:'Team or area of interest (exact choice)',
   interestedFunctions:'Interested functions (one exact choice per line)',
   technicalSkillAreas:'Technical skill areas (one exact choice per line)',
+  spokenLanguages:'Languages for checkbox questions (one exact choice per line)',
   coverLetter:'Reusable cover letter text (review for each job; text fields only)',
   certifications:'Current certifications',
   showreelUrl:'Showreel or website link',
@@ -19,13 +22,13 @@ const friendly = {
   desiredHoursPerWeek:'Preferred hours per week', referralSource:'How you heard about the job',
   currentlyAnEmployee:'Currently an employee of the hiring company',
   meetsListedMinimumRequirements:'Meets all listed minimum requirements (review for every job)',
-  veteranStatus:'Veteran status', phoneDeviceType:'Phone device type', zipCode:'ZIP / postal code'
+  veteranStatus:'Protected-veteran status (exact choice shown on applications)', phoneDeviceType:'Phone device type', zipCode:'ZIP / postal code'
 };
-const booleanKeys = new Set(['authorizedToWork','requiresSponsorship','willingToRelocate','willingToTravel','previouslyEmployedByCompany','previouslyAppliedToCompany','nonCompeteAgreement','conflictOfInterest','currentlyAnEmployee','meetsListedMinimumRequirements']);
+const booleanKeys = new Set(['authorizedToWork','requiresSponsorship','willingToRelocate','willingToTravel','previouslyEmployedByCompany','previouslyAppliedToCompany','nonCompeteAgreement','conflictOfInterest','currentlyAnEmployee','meetsListedMinimumRequirements','hasServedInMilitary']);
 function labelFor(key) {return friendly[key] || key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./,s=>s.toUpperCase());}
 function field(parent,key,value) {
   const label = document.createElement('label'); label.textContent=labelFor(key);
-  const el=document.createElement(booleanKeys.has(key)?'select':['summary','skills','description','interestedFunctions','technicalSkillAreas','coverLetter'].includes(key)?'textarea':'input');
+  const el=document.createElement(booleanKeys.has(key)?'select':['summary','skills','description','interestedFunctions','technicalSkillAreas','spokenLanguages','coverLetter'].includes(key)?'textarea':'input');
   if (booleanKeys.has(key)) for(const text of ['','Yes','No']) {const o=document.createElement('option');o.value=text;o.textContent=text||'Leave unanswered';el.appendChild(o);}
   if(key==='ssnLastFour'){el.inputMode='numeric';el.maxLength=4;el.pattern='[0-9]{4}';el.autocomplete='off';}
   el.value=String(value??''); label.appendChild(el);parent.appendChild(label);return el;
