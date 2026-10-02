@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.2.1
+FIREFOX FORM FILLER - VERSION 1.3.0
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -88,6 +88,16 @@ selects a matching option within the linked menu. Unavailable, unrecognized or
 unverified choices are reported for manual review. This does not guarantee
 compatibility with every Workday or other ATS form.
 
+MODERN FORM SAFETY
+Review & Fill also checks accessible open Shadow DOM fields, with firm scan
+limits so unusually large pages cannot trigger unbounded traversal. Filled
+native controls are checked again after a short delay so React-style controlled
+inputs that revert are reported for manual review instead of counted as filled.
+
+Visible embedded application frames are reported in Needs attention. The add-on
+does not silently access a third-party frame: its hostname must be reviewed and
+trusted separately. Filling inside embedded frames remains manual for now.
+
 RESULTS / NEEDS ATTENTION
 After applying, see the filled count and fields needing review. Click an
 attention item to scroll to and focus that field. The review hides so you can
@@ -109,6 +119,11 @@ JavaScript syntax, manifest JSON, package references and ZIP integrity were
 checked in the build environment. Live Firefox/ATS interaction was not available
 for automated browser testing, so test the new field-memory control on a sample
 application before relying on it for a large batch of applications.
+
+The repository includes docs/large-form-test.html, a synthetic page that creates
+1,500 fields, an open Shadow DOM section, an embedded same-origin form and a
+25,000-option dropdown. Use it only as a disposable performance fixture; it
+contains no saved answers or real application data.
 
 Mozilla temporary installation instructions:
 https://extensionworkshop.com/documentation/develop/temporary-installation-in-firefox/

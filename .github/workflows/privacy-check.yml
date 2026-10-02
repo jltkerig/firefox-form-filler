@@ -15,4 +15,5 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/check-privacy-contract.mjs
+      - run: node scripts/check-large-form-fixture.mjs
       - run: node --check autofill.js && node --check background.js && node --check options.js && node --check popup.js

@@ -20,13 +20,25 @@ function assertBlank(value, path = 'defaults') {
 assertBlank(defaultsContext.JAMIE_DEFAULTS);
 assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'storage']);
 assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
+assert.match(read('README.txt'), new RegExp(`^FIREFOX FORM FILLER - VERSION ${manifest.version.replaceAll('.', '\\.')}`, 'm'),
+  'README and manifest versions must match');
 
 for (const name of ['autofill.js', 'background.js', 'options.js', 'popup.js']) {
   const source = read(name);
   assert.doesNotMatch(source, /browser\.storage\.sync|chrome\.storage\.sync/,
     `${name} must keep answers in Firefox local storage`);
-  assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|sendBeacon)\s*\(/,
+  assert.doesNotMatch(source, /\b(?:fetch|XMLHttpRequest|sendBeacon|WebSocket|EventSource|WebTransport)\s*\(?/,
     `${name} must not send form data over the network`);
+  assert.doesNotMatch(source, /\b(?:eval|Function)\s*\(|\.insertAdjacentHTML\s*\(|\.outerHTML\s*=|document\.write\s*\(|createContextualFragment\s*\(/,
+    `${name} must not evaluate code or insert untrusted HTML`);
+  const literalHtml = [...source.matchAll(/\.innerHTML\s*=\s*`([\s\S]*?)`/g)];
+  for (const match of literalHtml) {
+    assert.doesNotMatch(match[1], /\$\{/,
+      `${name} innerHTML templates must not interpolate page or profile data`);
+  }
+  const withoutLiteralHtml = source.replace(/\.innerHTML\s*=\s*`[\s\S]*?`/g, '');
+  assert.doesNotMatch(withoutLiteralHtml, /\.innerHTML\s*=/,
+    `${name} innerHTML assignments must be fixed literal templates`);
 }
 
 const autofill = read('autofill.js');
@@ -36,5 +48,11 @@ assert.match(autofill, /\['hidden','submit','button','reset','password','image'\
   'review must skip hidden and password fields');
 assert.match(autofill, /!isVisible\(el\)/,
   'review must skip invisible fields');
+assert.match(autofill, /await delay\(175\)/,
+  'fills must be rechecked after framework state has time to react');
+assert.match(autofill, /REVIEW_SCAN_LIMITS/,
+  'shadow DOM discovery must remain bounded');
+assert.doesNotMatch(read('popup.js'), /allFrames\s*:\s*true|all_frames\s*:\s*true/,
+  'iframe origins must not be filled without a separate trust design');
 
 console.log('Privacy contract checks passed (static source checks; live Firefox behavior still needs testing).');

@@ -159,6 +159,16 @@
       .replace(/\s+/g, ' ')
       .trim();
 
+  function elementRoot(el) {
+    const root = el?.getRootNode?.();
+    return root && typeof root.querySelectorAll === 'function' ? root : document;
+  }
+
+  function rootElementById(el, id) {
+    const root = elementRoot(el);
+    return root === document ? document.getElementById(id) : root.getElementById?.(id);
+  }
+
   function isVisible(el) {
     if (!el || el.disabled || el.type === 'hidden' || el.matches(':disabled') ||
         el.closest('[aria-hidden="true"],[aria-disabled="true"],[inert]')) {
@@ -185,7 +195,7 @@
 
     if (el.id) {
       try {
-        document
+        elementRoot(el)
           .querySelectorAll(`label[for="${CSS.escape(el.id)}"]`)
           .forEach((label) => {
             pieces.push(label.innerText || label.textContent || '');
@@ -209,7 +219,7 @@
     if (labelledBy) {
       labelledBy.split(/\s+/).forEach((id) => {
         const node =
-          document.getElementById(id);
+          rootElementById(el, id);
 
         if (node) {
           pieces.push(
@@ -1689,13 +1699,14 @@
     LEARNED_FIELDS = Array.isArray(saved.learnedFields) ? saved.learnedFields : [];
   }
   const reviewSelector = 'input, textarea, select, [role="combobox"], button[aria-haspopup="listbox"], [role="checkbox"], [role="radio"], [contenteditable="true"][role="textbox"], [contenteditable="true"][aria-label]';
+  const REVIEW_SCAN_LIMITS = Object.freeze({fields: 1000, shadowRoots: 24, shadowHostNodes: 12000});
   const isCustom = el => !(el instanceof HTMLSelectElement) &&
     (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup') === 'listbox');
   const isChoice = el => ['radio','checkbox'].includes(el.type) || ['radio','checkbox'].includes(el.getAttribute('role'));
   const isChecked = el => el.checked === true || el.getAttribute('aria-checked') === 'true';
   function directLabel(el) {
     const explicit = [...(el.labels || [])].map(label => label.textContent.trim()).filter(Boolean);
-    const labelled = (el.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent || '').join(' ').trim();
+    const labelled = (el.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => rootElementById(el, id)?.textContent || '').join(' ').trim();
     const text = explicit[0] || el.getAttribute('aria-label') || labelled || el.getAttribute('placeholder') ||
       (isChoice(el) ? el.textContent : '') || el.getAttribute('name') || el.id || '';
     return normalize(text.replace(/([a-z])([A-Z])/g, '$1 $2'));
@@ -1703,7 +1714,7 @@
   function choiceLabelText(el) {
     const explicit = [...(el.labels || [])].map(label => label.textContent || '').find(Boolean);
     const labelledBy = (el.getAttribute('aria-labelledby') || '').split(/\s+/)
-      .map(id => document.getElementById(id)?.textContent || '').join(' ');
+      .map(id => rootElementById(el, id)?.textContent || '').join(' ');
     return normalize(explicit || el.getAttribute('aria-label') || labelledBy ||
       el.closest('label')?.textContent || (el.getAttribute('role') ? el.textContent : ''));
   }
@@ -1715,7 +1726,7 @@
     return !!text && !/^(?:please )?(?:select|choose|pick|search)(?:\b.*)?$/.test(text);
   }
   function peers(el) {
-    if (el.type === 'radio' && el.name) return [...document.querySelectorAll('input[type="radio"]')]
+    if (el.type === 'radio' && el.name) return [...elementRoot(el).querySelectorAll('input[type="radio"]')]
       .filter(other => other.name === el.name && other.form === el.form);
     return [...(el.closest('fieldset,[role="radiogroup"],[role="group"],.form-group,.question,.field') || el.parentElement)
       .querySelectorAll('input[type="checkbox"],input[type="radio"],[role="checkbox"],[role="radio"]')];
@@ -1728,7 +1739,7 @@
     const group = el.closest('fieldset,[role="radiogroup"],[role="group"],.question,.form-group,.field');
     const legend = group?.querySelector('legend');
     const labelledBy = group?.getAttribute('aria-labelledby') || '';
-    const labelledText = labelledBy.split(/\s+/).map(id => document.getElementById(id)?.textContent || '').join(' ');
+    const labelledText = labelledBy.split(/\s+/).map(id => rootElementById(el, id)?.textContent || '').join(' ');
     const groupLabel = group?.getAttribute('aria-label') || '';
     // The option's label is an answer, not evidence of what the question asks.
     return normalize([legend?.textContent || '', labelledText, groupLabel,
@@ -1984,9 +1995,61 @@
       choice.getAttribute('aria-required') === 'true');
     return availabilityDays || (sharedRequirement && !individuallyRequired) ? group : null;
   }
+  function discoverReviewElements() {
+    const fields = [], roots = [document];
+    let truncated = false, visitedHosts = 0;
+    for (let rootIndex = 0; rootIndex < roots.length; rootIndex++) {
+      const root = roots[rootIndex];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      let node;
+      while ((node = walker.nextNode())) {
+        visitedHosts++;
+        if (visitedHosts > REVIEW_SCAN_LIMITS.shadowHostNodes) { truncated = true; break; }
+        if (node.shadowRoot) {
+          if (roots.length >= REVIEW_SCAN_LIMITS.shadowRoots) { truncated = true; break; }
+          roots.push(node.shadowRoot);
+        }
+      }
+      if (visitedHosts > REVIEW_SCAN_LIMITS.shadowHostNodes) break;
+    }
+    const lightDomLimit = roots.length > 1 ? REVIEW_SCAN_LIMITS.fields - 100 : REVIEW_SCAN_LIMITS.fields;
+    for (let rootIndex = 0; rootIndex < roots.length; rootIndex++) {
+      const rootLimit = rootIndex === 0 ? lightDomLimit : REVIEW_SCAN_LIMITS.fields;
+      for (const el of roots[rootIndex].querySelectorAll(reviewSelector)) {
+        if (fields.length >= rootLimit) { truncated = true; break; }
+        fields.push(el);
+      }
+      if (fields.length >= REVIEW_SCAN_LIMITS.fields) { truncated = true; break; }
+    }
+    return {fields, truncated};
+  }
+  function embeddedFrameAttention() {
+    const attention = [];
+    for (const frame of [...document.querySelectorAll('iframe,frame')].filter(isVisible).slice(0, 20)) {
+      let url;
+      try { url = new URL(frame.getAttribute('src') || location.href, location.href); }
+      catch { continue; }
+      let containsFields = false;
+      try { containsFields = !!frame.contentDocument?.querySelector(reviewSelector); }
+      catch {}
+      const hint = normalize([frame.title, frame.name, frame.id, url.hostname, url.pathname].join(' '));
+      const looksLikeForm = containsFields || /\b(?:apply|application|candidate|career|form|job|workday|greenhouse|lever|icims|taleo|brassring|successfactors|ashby|smartrecruiters)\b/.test(hint);
+      if (!looksLikeForm) continue;
+      const crossOrigin = url.origin !== location.origin;
+      attention.push({
+        el: frame,
+        label: frame.title?.trim() || `Embedded content from ${url.hostname || 'this page'}`,
+        reason: crossOrigin ?
+          `Embedded form may require separately trusting ${url.hostname}; it was not accessed` :
+          'Form is inside an embedded frame; review it manually'
+      });
+    }
+    return attention;
+  }
   function collectReview() {
     const proposals = [], attention = [], seen = new Set(), attentionGroups = new Set();
-    for (const el of document.querySelectorAll(reviewSelector)) {
+    const discovered = discoverReviewElements();
+    for (const el of discovered.fields) {
       if (!isVisible(el) || el.readOnly || el.getAttribute('aria-disabled') === 'true' ||
         el.closest('#jk-autofill-panel') || ['hidden','submit','button','reset','password','image'].includes(el.type) && !isCustom(el)) continue;
       if (currentAnswer(el)) continue;
@@ -2021,18 +2084,27 @@
           reason});
       }
     }
+    attention.push(...embeddedFrameAttention());
+    if (discovered.truncated) attention.push({
+      el: document.body,
+      label: 'Large or deeply nested form',
+      reason: `Safety scan limit reached (${REVIEW_SCAN_LIMITS.fields} fields or ${REVIEW_SCAN_LIMITS.shadowRoots} open shadow roots); review remaining fields manually`
+    });
     return {proposals, attention};
   }
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   async function chooseCustom(item) {
     const el = item.el;
-    const before = new Set([...document.querySelectorAll('[role="listbox"]')].filter(isVisible));
+    const controlRoot = elementRoot(el);
+    const listRoots = controlRoot === document ? [document] : [controlRoot, document];
+    const visibleLists = () => listRoots.flatMap(root => [...root.querySelectorAll('[role="listbox"]')]).filter(isVisible);
+    const before = new Set(visibleLists());
     el.click();
     try {
       for (let attempt = 0; attempt < 12; attempt++) {
         const ids = [el.getAttribute('aria-controls'), el.getAttribute('aria-owns')].filter(Boolean).join(' ').split(/\s+/);
-        let lists = ids.map(id => document.getElementById(id)).filter(node => node && isVisible(node));
-        if (!lists.length) lists = [...document.querySelectorAll('[role="listbox"]')].filter(node => isVisible(node) && !before.has(node));
+        let lists = ids.map(id => rootElementById(el, id)).filter(node => node && isVisible(node));
+        if (!lists.length) lists = visibleLists().filter(node => !before.has(node));
         if (lists.length === 1) {
           const options = [...lists[0].querySelectorAll('[role="option"]')].filter(isVisible);
           const option = matchingOption(options, item);
@@ -2058,13 +2130,17 @@
     if (!globalThis.__jamieJobAutofill || !el.isConnected || !isVisible(el) || currentAnswer(el)) return false;
     const fresh = answerFor(el);
     if (!fresh || fresh.value !== item.value || !candidateFits(el, item.value)) return false;
-    if (isChoice(el)) { el.click(); return isChecked(el); }
+    if (isChoice(el)) { el.click(); await delay(175); return isChecked(el); }
     if (isCustom(el)) return chooseCustom(item);
     if (el instanceof HTMLSelectElement) {
       const option = matchingOption([...el.options], item);
-      return !!option && setValue(el, option.value);
+      if (!option || !setValue(el, option.value)) return false;
+      await delay(175);
+      return el.value === option.value && option.selected;
     }
-    return setValue(el, item.value) && el.value === item.value;
+    if (!setValue(el, item.value)) return false;
+    await delay(175);
+    return el.value === String(item.value);
   }
   function showReview() {
     document.getElementById('jk-review-host')?.remove();
@@ -2243,14 +2319,7 @@
         WORK HISTORY
       </small>
 
-      ${PROFILE.jobs
-        .map(
-          (job, index) =>
-            `<button type="button" data-job="${index}">
-              Job ${index + 1}
-            </button>`
-        )
-        .join('')}
+      <span data-job-buttons></span>
 
       <hr>
 
@@ -2258,14 +2327,7 @@
         EDUCATION
       </small>
 
-      ${PROFILE.education
-        .map(
-          (school, index) =>
-            `<button type="button" data-school="${index}">
-              School ${index + 1}
-            </button>`
-        )
-        .join('')}
+      <span data-school-buttons></span>
 
       <p>
         Never submits the form.
@@ -2273,6 +2335,24 @@
         Other sensitive self-ID questions are left for you.
       </p>
     `;
+
+    const jobButtons = panel.querySelector('[data-job-buttons]');
+    PROFILE.jobs.forEach((job, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.job = String(index);
+      button.textContent = `Job ${index + 1}`;
+      jobButtons.appendChild(button);
+    });
+
+    const schoolButtons = panel.querySelector('[data-school-buttons]');
+    PROFILE.education.forEach((school, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.school = String(index);
+      button.textContent = `School ${index + 1}`;
+      schoolButtons.appendChild(button);
+    });
 
     const style =
       document.createElement(

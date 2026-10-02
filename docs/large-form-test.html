@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Firefox Form Filler synthetic large-form test</title>
+  <style>
+    body{font:16px/1.4 system-ui;max-width:900px;margin:2rem auto;padding:0 1rem}label{display:block;margin:.35rem 0}#many-fields{max-height:22rem;overflow:auto;border:1px solid #aaa;padding:1rem}select{max-width:100%}
+  </style>
+</head>
+<body>
+  <h1>Synthetic large-form test</h1>
+  <p>This disposable fixture contains no real application data. Generate the controls, whitelist this GitHub Pages hostname, and use Review &amp; Fill while observing responsiveness.</p>
+  <button id="generate" type="button">Generate stress fixture</button>
+  <p id="status" role="status">Not generated.</p>
+  <form>
+    <label>First name <input name="firstName" autocomplete="given-name"></label>
+    <div id="shadow-host"></div>
+    <label>Large option list <select id="large-select"><option value="">Choose one</option></select></label>
+    <div id="many-fields"></div>
+    <iframe title="Embedded application form" srcdoc="<!doctype html><label>Embedded required answer <input required></label>"></iframe>
+  </form>
+  <script>
+    const FIELD_COUNT = 1500;
+    const OPTION_COUNT = 25000;
+    document.getElementById('generate').addEventListener('click', () => {
+      const fields = document.createDocumentFragment();
+      for (let index = 0; index < FIELD_COUNT; index++) {
+        const label = document.createElement('label');
+        label.append(`Synthetic field ${index} `);
+        const input = document.createElement('input');
+        input.name = `synthetic-${index}`;
+        label.append(input);
+        fields.append(label);
+      }
+      document.getElementById('many-fields').replaceChildren(fields);
+      const options = document.createDocumentFragment();
+      for (let index = 0; index < OPTION_COUNT; index++) {
+        const option = document.createElement('option');
+        option.value = `value-${index}`;
+        option.textContent = `Synthetic option ${index}`;
+        options.append(option);
+      }
+      document.getElementById('large-select').append(options);
+      const shadow = document.getElementById('shadow-host').attachShadow({mode: 'open'});
+      const label = document.createElement('label');
+      label.textContent = 'Shadow DOM required answer ';
+      const input = document.createElement('input');
+      input.required = true;
+      label.append(input);
+      shadow.append(label);
+      document.getElementById('status').textContent = `${FIELD_COUNT} fields and ${OPTION_COUNT} options generated.`;
+    }, {once: true});
+  </script>
+</body>
+</html>
