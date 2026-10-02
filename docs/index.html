@@ -25,6 +25,13 @@
       <p>After downloading a signed <code>.xpi</code> file, open <strong>Add-ons and themes</strong> in Firefox, choose the settings gear, then <strong>Install Add-on From File</strong>. Select the downloaded file and approve Firefox’s prompt.</p>
       <p>Source code and release history: <a href="https://github.com/jltkerig/firefox-form-filler">firefox-form-filler on GitHub</a>.</p>
     </div>
+    <div class="card">
+      <h2>Developer Edition test build</h2>
+      <p>This is an <strong>unsigned</strong> development XPI. It is for Firefox Developer Edition, not standard Firefox, and it does not have automatic updates.</p>
+      <p><a class="button" href="./firefox-form-filler-dev-v1.2.1-55f7db4-portable.xpi" download>Download unsigned development XPI</a></p>
+      <p>To install it, Firefox Developer Edition must have <code>xpinstall.signatures.required</code> set to <code>false</code>. That setting disables add-on signature enforcement in this browser profile. Then open <strong>Add-ons and themes</strong>, choose the settings gear, and select <strong>Install Add-on From File</strong>. Keep a separate backup of any saved extension answers before replacing an existing installation.</p>
+      <p><a href="https://extensionworkshop.com/documentation/develop/test-permission-requests/">Mozilla's Developer Edition instructions</a></p>
+    </div>
     <p>This page never receives your saved answers or application data. Review every proposed answer before filling a form; the add-on does not submit applications.</p>
   </main>
   <script>
