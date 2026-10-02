@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firefox Form Filler</title>
+  <style>
+    body { max-width: 44rem; margin: 3rem auto; padding: 0 1.25rem; background: #f7f9fc; color: #17233b; font: 1rem/1.6 system-ui, sans-serif; }
+    h1 { line-height: 1.2; }
+    .card { padding: 1.5rem; border: 1px solid #d9e1ed; border-radius: .75rem; background: white; }
+    .button { display: inline-block; padding: .65rem 1rem; border-radius: .5rem; background: #194e9e; color: white; text-decoration: none; font-weight: 650; }
+    .button[hidden] { display: none; }
+    a { color: #194e9e; }
+    .button:focus-visible, a:focus-visible { outline: 3px solid #e8a800; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Firefox Form Filler</h1>
+    <p>Review and fill job applications on websites you choose to trust. Your saved answers stay in Firefox local extension storage.</p>
+    <div class="card">
+      <h2>Install in Firefox</h2>
+      <p id="release-status" role="status">Checking for a Firefox release…</p>
+      <p><a id="download" class="button" hidden>Download release XPI</a></p>
+      <p>After downloading a signed <code>.xpi</code> file, open <strong>Add-ons and themes</strong> in Firefox, choose the settings gear, then <strong>Install Add-on From File</strong>. Select the downloaded file and approve Firefox’s prompt.</p>
+      <p>Source code and release history: <a href="https://github.com/jltkerig/firefox-form-filler">firefox-form-filler on GitHub</a>.</p>
+    </div>
+    <p>This page never receives your saved answers or application data. Review every proposed answer before filling a form; the add-on does not submit applications.</p>
+  </main>
+  <script>
+    fetch('https://api.github.com/repos/jltkerig/firefox-form-filler/releases/latest', {headers: {'Accept': 'application/vnd.github+json'}})
+      .then(response => { if (!response.ok) throw new Error('No release'); return response.json(); })
+      .then(release => {
+        const asset = release.assets?.find(item => /^firefox-form-filler-v\d+(?:\.\d+)+\.xpi$/.test(item.name));
+        if (!asset) throw new Error('No signed XPI');
+        const link = document.getElementById('download');
+        link.href = asset.browser_download_url;
+        link.hidden = false;
+        document.getElementById('release-status').textContent = `Release ${release.tag_name} is available. Firefox will verify its signature when you install it.`;
+      })
+      .catch(() => {
+        document.getElementById('release-status').textContent = 'A signed Firefox release is not available yet. Source code alone cannot be installed permanently in standard Firefox.';
+      });
+  </script>
+</body>
+</html>
