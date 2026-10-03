@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.4.0
+FIREFOX FORM FILLER - VERSION 1.4.1
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -62,6 +62,10 @@ answers are stored locally in Firefox under extension storage and are considered
 before the built-in matching rules during Review & Fill. Matching uses the
 question/label plus stable field information such as name, id, placeholder and
 control type, so the same wording can often be reused on another application.
+
+The options page includes a searchable Remembered fields manager. It can update
+one learned answer or remove one exact mapping after a separate confirmation.
+These actions do not change the main profile, fill a page, or submit anything.
 
 For safety, field memory refuses password, file-upload, full Social Security,
 bank/routing, payment-card, PIN/security-code, driver's-license and passport-

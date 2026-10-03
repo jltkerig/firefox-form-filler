@@ -77,5 +77,14 @@ for (const source of [read('popup.js'), read('background.js')]) {
   assert.match(source, /\['defaults\.js', 'autofill\.js'\]/,
     'registered content scripts must load shared defaults before autofill');
 }
+const options = read('options.js');
+assert.match(options, /confirm\(`Remove only the remembered field/,
+  'remembered-field deletion must require an exact-item confirmation');
+assert.doesNotMatch(options, /storage\.local\.(?:clear|remove)\(/,
+  'remembered-field management must not clear unrelated local storage');
+assert.match(options, /learnedFields\.filter\(saved=>saved!==item\)/,
+  'remembered-field removal must target only the selected in-memory record');
+assert.match(autofill, /MEMORY_LIMITS = Object\.freeze\(\{records: 2000, answerLength: 20000\}\)/,
+  'field memory must stay within the validated storage limits');
 
 console.log('Privacy contract checks passed (static source checks; live Firefox behavior still needs testing).');

@@ -3,6 +3,7 @@ const status = document.getElementById('status');
 const controls = [];
 const jobControls = [], schoolControls = [];
 let pendingImport = null;
+let learnedFields = [];
 const friendly = {
   eeoGender:'EEO gender (exact choice shown on applications)',
   eeoHispanicLatino:'EEO Hispanic or Latino (Yes, No, or exact choice)',
@@ -42,10 +43,39 @@ function addRecord(parent, record, keys, destination) {
   const remove=document.createElement('button');remove.type='button';remove.textContent='Remove entry';
   remove.onclick=()=>{article.remove();destination.splice(destination.indexOf(entry),1);};article.appendChild(remove);
 }
+async function saveLearnedFields(next, message) {
+  await browser.storage.local.set({learnedFields:next});
+  learnedFields=next;
+  status.textContent=message;
+}
+function renderLearnedFields() {
+  const list=document.getElementById('memory-list'), query=document.getElementById('memory-search').value.trim().toLowerCase();
+  const visible=learnedFields.filter(item=>`${item.label} ${item.question} ${item.host} ${item.type}`.toLowerCase().includes(query));
+  document.getElementById('memory-count').textContent=`${visible.length} of ${learnedFields.length} remembered fields shown.`;
+  list.replaceChildren();
+  for(const item of visible) {
+    const article=document.createElement('article'), title=document.createElement('strong'), meta=document.createElement('small');
+    title.textContent=(item.label||item.question||'Unlabeled field').slice(0,240);
+    meta.textContent=([item.host,item.type].filter(Boolean).join(' · ')||'No website metadata').slice(0,240);
+    const label=document.createElement('label');label.textContent='Saved answer';
+    const answer=document.createElement('input');answer.value=item.answer||'';answer.autocomplete='off';label.appendChild(answer);
+    const save=document.createElement('button');save.type='button';save.textContent='Save answer';
+    save.onclick=async()=>{const value=answer.value.trim();if(!value){status.textContent='A remembered answer cannot be blank. Remove the field instead.';return;}
+      if(value.length>20000){status.textContent='A remembered answer cannot exceed 20,000 characters.';return;}
+      const next=learnedFields.map(saved=>saved===item?{...saved,answer:value,updatedAt:Date.now()}:saved);
+      try{await saveLearnedFields(next,`Updated remembered field: ${title.textContent}.`);renderLearnedFields();}catch{status.textContent='Could not update the remembered field.';}};
+    const remove=document.createElement('button');remove.type='button';remove.className='danger';remove.textContent='Remove remembered field';
+    remove.onclick=async()=>{const target=`${title.textContent}${item.host?` on ${item.host}`:''}`;
+      if(!confirm(`Remove only the remembered field “${target}”? This does not change your main profile.`))return;
+      const next=learnedFields.filter(saved=>saved!==item);try{await saveLearnedFields(next,`Removed remembered field: ${title.textContent}.`);renderLearnedFields();}catch{status.textContent='Could not remove the remembered field.';}};
+    article.append(title,meta,label,save,remove);list.appendChild(article);
+  }
+}
 async function init(){
   await FFF_STORAGE.migrateStorage();
-  const saved=await browser.storage.local.get(['jamieProfile','settings']);
+  const saved=await browser.storage.local.get(['jamieProfile','settings','learnedFields']);
   const data=saved.jamieProfile||JAMIE_DEFAULTS;
+  learnedFields=FFF_STORAGE.normalizeLearnedFields(saved.learnedFields||[]);renderLearnedFields();
   document.getElementById('bitwarden-mode').checked = FFF_STORAGE.normalizeSettings(saved.settings).bitwardenCompatibilityMode;
   for(const [name,title] of [['profile','Contact and professional profile'],['optional','Application answers']]){
     const group=section(title);
@@ -61,6 +91,7 @@ async function init(){
     const add=document.createElement('button');add.type='button';add.textContent=label;add.onclick=()=>addRecord(parent,{},keys,destination);parent.appendChild(add);
   }
 }
+document.getElementById('memory-search').addEventListener('input',renderLearnedFields);
 function downloadJson(data, filename) {
   const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
   const link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();

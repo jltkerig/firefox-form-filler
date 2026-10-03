@@ -988,6 +988,7 @@
 
 
   let LEARNED_FIELDS = [];
+  const MEMORY_LIMITS = Object.freeze({records: 2000, answerLength: 20000});
   let SETTINGS = {bitwardenCompatibilityMode: false};
   let memoryUiInstalled = false;
   let activeMemoryField = null;
@@ -1132,6 +1133,8 @@
       value = value.trim();
     }
     if (!value) { toast('Enter an answer in the field first.'); return; }
+    if (value.length > MEMORY_LIMITS.answerLength) { toast('This answer is too long to remember safely.'); return; }
+    if (!existing && LEARNED_FIELDS.length >= MEMORY_LIMITS.records) { toast('The remembered-field limit has been reached.'); return; }
     const identity = memoryIdentity(el);
     const record = {
       id: existing?.id || `learned-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
