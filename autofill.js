@@ -472,7 +472,7 @@
     [
       () => PROFILE.email,
       [
-        /\be-?mail\b/,
+        /\be[\s-]?mail\b/,
         /\bemail address\b/
       ],
       [

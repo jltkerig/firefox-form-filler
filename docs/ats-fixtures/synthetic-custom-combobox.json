@@ -23,6 +23,14 @@
         "autocomplete": "url",
         "aria-required": "true"
       }
+    },
+    {
+      "fieldType": "email",
+      "label": "e mail address",
+      "reason": "hyphenated email label was not recognized after normalization",
+      "aria": {
+        "autocomplete": "email"
+      }
     }
   ]
 }

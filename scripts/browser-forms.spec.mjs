@@ -46,7 +46,7 @@ test('fills recognized fields, preserves existing values, and skips credentials'
   await page.setContent(`<form>
     <label>First name <input name="firstName"></label>
     <label>Last name <input name="lastName"></label>
-    <label>Email <input type="email" name="email"></label>
+    <label>E-mail address <input type="email" name="email"></label>
     <label>Phone <input type="tel" name="phone"></label>
     <label>City <input name="city" value="Keep this"></label>
     <label>Password <input type="password" name="password"></label>
