@@ -31,6 +31,9 @@ function labelFor(key) {return friendly[key] || key.replace(/([a-z])([A-Z])/g,'$
 function field(parent,key,value) {
   const label = document.createElement('label'); label.textContent=labelFor(key);
   const el=document.createElement(booleanKeys.has(key)?'select':['summary','skills','description','interestedFunctions','technicalSkillAreas','spokenLanguages','coverLetter'].includes(key)?'textarea':'input');
+  const inputTypes={email:'email',phone:'tel',linkedin:'url',portfolio:'url',github:'url',otherWebsite:'url',showreelUrl:'url'};
+  if(el instanceof HTMLInputElement&&inputTypes[key])el.type=inputTypes[key];
+  if(key==='earliestStartDate'&&(!value||/^\d{4}-\d{2}-\d{2}$/.test(value)))el.type='date';
   if (booleanKeys.has(key)) for(const text of ['','Yes','No']) {const o=document.createElement('option');o.value=text;o.textContent=text||'Leave unanswered';el.appendChild(o);}
   if(key==='ssnLastFour'){el.inputMode='numeric';el.maxLength=4;el.pattern='[0-9]{4}';el.autocomplete='off';}
   el.value=String(value??''); label.appendChild(el);parent.appendChild(label);return el;

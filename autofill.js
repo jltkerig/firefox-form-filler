@@ -1435,7 +1435,8 @@
       } else if (el.type === 'checkbox' || el.getAttribute('role') === 'checkbox') {
         if (['yes','true','checked','1'].includes(wanted)) return {value: String(learned.answer), learned: true};
       } else {
-        return {value: String(learned.answer), learned: true};
+        const typed=typedAnswer(el,learned.answer);
+        return typed?{value:typed,learned:true}:null;
       }
     }
     if (isChoice(el)) {
@@ -1469,7 +1470,22 @@
       const formatted = phoneAnswer(el);
       return formatted ? {value: formatted} : null;
     }
-    return value ? {value: String(value)} : null;
+    if (!value) return null;
+    const typed = typedAnswer(el, value);
+    return typed ? {value: typed} : null;
+  }
+  function typedAnswer(el, value) {
+    const answer=String(value).trim();
+    if (!(el instanceof HTMLInputElement) || el.type!=='date') return answer;
+    let match=answer.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      const us=answer.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+      if (us) match=[answer,us[3],us[1].padStart(2,'0'),us[2].padStart(2,'0')];
+    }
+    if (!match) return null;
+    const [,year,month,day]=match, date=new Date(`${year}-${month}-${day}T00:00:00Z`);
+    return date.getUTCFullYear()===Number(year)&&date.getUTCMonth()+1===Number(month)&&date.getUTCDate()===Number(day)?
+      `${year}-${month}-${day}`:null;
   }
   function phoneAnswer(el) {
     const saved = String(PROFILE.phone || '').trim();

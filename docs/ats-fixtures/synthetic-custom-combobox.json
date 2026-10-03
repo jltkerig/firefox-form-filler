@@ -31,6 +31,14 @@
       "aria": {
         "autocomplete": "email"
       }
+    },
+    {
+      "fieldType": "date",
+      "label": "earliest start date",
+      "reason": "browser date inputs require an iso calendar value",
+      "aria": {
+        "aria-required": "true"
+      }
     }
   ]
 }

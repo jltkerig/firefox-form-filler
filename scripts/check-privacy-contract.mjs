@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 
 const read = name => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const manifest = JSON.parse(read('manifest.json'));
+const packageJson = JSON.parse(read('package.json'));
 const defaultsContext = {};
 runInNewContext(read('defaults.js'), defaultsContext);
 
@@ -22,6 +23,7 @@ assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 's
 assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
 assert.match(read('README.txt'), new RegExp(`^FIREFOX FORM FILLER - VERSION ${manifest.version.replaceAll('.', '\\.')}`, 'm'),
   'README and manifest versions must match');
+assert.equal(packageJson.version, manifest.version, 'package and manifest versions must match');
 
 for (const name of ['autofill.js', 'background.js', 'options.js', 'popup.js', 'storage-schema.js']) {
   const source = read(name);

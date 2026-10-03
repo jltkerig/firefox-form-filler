@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.4.1
+FIREFOX FORM FILLER - VERSION 1.4.2
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -115,6 +115,12 @@ custom menus, options are checked only after you confirm the preview. The add-on
 selects a matching option within the linked menu. Unavailable, unrecognized or
 unverified choices are reported for manual review. This does not guarantee
 compatibility with every Workday or other ATS form.
+
+TYPED INPUTS - NEW IN 1.4.2
+The profile editor uses native email, telephone, URL and date controls where
+appropriate. Review & Fill converts strict US dates such as 10/15/2026 to the
+ISO value required by a native date field. Invalid or ambiguous free-form dates
+remain unfilled for manual review rather than being guessed.
 
 MODERN FORM SAFETY
 Review & Fill also checks accessible open Shadow DOM fields, with firm scan

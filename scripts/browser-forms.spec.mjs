@@ -12,7 +12,7 @@ const syntheticProfile = {
     state:'New York', stateCode:'NY', country:'United States', countryCode:'US', linkedin:'https://example.invalid/profile',
     jobs:[], education:[]
   },
-  optional: {authorizedToWork:'Yes', requiresSponsorship:'No', desiredHoursPerWeek:'40'}
+  optional: {authorizedToWork:'Yes', requiresSponsorship:'No', desiredHoursPerWeek:'40', earliestStartDate:'10/15/2026'}
 };
 
 async function injectAutofill(page) {
@@ -48,18 +48,20 @@ test('fills recognized fields, preserves existing values, and skips credentials'
     <label>Last name <input name="lastName"></label>
     <label>E-mail address <input type="email" name="email"></label>
     <label>Phone <input type="tel" name="phone"></label>
+    <label>Earliest start date <input type="date" name="startDate"></label>
     <label>City <input name="city" value="Keep this"></label>
     <label>Password <input type="password" name="password"></label>
     <button type="submit">Submit</button>
   </form>`);
   await injectAutofill(page);
   const panel=await review(page);
-  await expect(panel.locator('input[type="checkbox"]')).toHaveCount(4);
+  await expect(panel.locator('input[type="checkbox"]')).toHaveCount(5);
   await panel.locator('#apply').click();
   await expect(page.locator('[name="firstName"]')).toHaveValue('Test');
   await expect(page.locator('[name="lastName"]')).toHaveValue('Applicant');
   await expect(page.locator('[name="email"]')).toHaveValue('autofill@example.invalid');
   await expect(page.locator('[name="phone"]')).toHaveValue('2025550147');
+  await expect(page.locator('[name="startDate"]')).toHaveValue('2026-10-15');
   await expect(page.locator('[name="city"]')).toHaveValue('Keep this');
   await expect(page.locator('[name="password"]')).toHaveValue('');
 });
