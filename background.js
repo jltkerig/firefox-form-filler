@@ -13,6 +13,18 @@ async function migrateProfile() {
   catch (error) { console.error('Profile migration was not applied:', error); }
 }
 
+async function refreshRegisteredScripts() {
+  const wanted = ['defaults.js', 'autofill.js'];
+  const entries = (await browser.scripting.getRegisteredContentScripts()).filter(entry => entry.id.startsWith('jamie-'));
+  for (const entry of entries) {
+    if (entry.js?.join() !== wanted.join()) await browser.scripting.updateContentScripts([{id: entry.id, js: wanted}]);
+  }
+}
+
+async function initializeExtension() {
+  await Promise.all([migrateProfile(), refreshRegisteredScripts()]);
+}
+
 async function reconcileRemovedOrigins(permissions) {
   const removed = new Set((permissions?.origins || []).filter(origin => origin.startsWith('https://')));
   if (!removed.size) return;
@@ -29,6 +41,6 @@ async function reconcileRemovedOrigins(permissions) {
 browser.permissions.onRemoved.addListener(permissions => {
   reconcileRemovedOrigins(permissions).catch(error => console.error('Could not reconcile removed site access:', error));
 });
-browser.runtime.onInstalled.addListener(migrateProfile);
-browser.runtime.onStartup.addListener(migrateProfile);
-migrateProfile();
+browser.runtime.onInstalled.addListener(initializeExtension);
+browser.runtime.onStartup.addListener(initializeExtension);
+initializeExtension().catch(error => console.error('Extension initialization failed:', error));

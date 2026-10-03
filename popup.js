@@ -4,6 +4,7 @@ const saveExample = document.getElementById('save-example');
 const status = document.getElementById('status');
 document.getElementById('version').textContent = `Version ${browser.runtime.getManifest().version}`;
 let tab, pattern, id;
+const contentScripts = ['defaults.js', 'autofill.js'];
 
 async function refreshList() {
   const entries = (await browser.scripting.getRegisteredContentScripts()).filter(e => e.id.startsWith('jamie-'));
@@ -45,9 +46,12 @@ enable.addEventListener('click', async () => {
     if (!granted) { status.textContent = 'Not added. Site access was not granted.'; return; }
     const registered = await browser.scripting.getRegisteredContentScripts({ids: [id]});
     if (!registered.length) await browser.scripting.registerContentScripts([{
-      id, matches: [pattern], js: ['autofill.js'], runAt: 'document_idle', persistAcrossSessions: true
+      id, matches: [pattern], js: contentScripts, runAt: 'document_idle', persistAcrossSessions: true
     }]);
-    await browser.scripting.executeScript({target: {tabId: tab.id}, files: ['autofill.js']});
+    else if (registered[0].js?.join() !== contentScripts.join()) {
+      await browser.scripting.updateContentScripts([{id, js: contentScripts}]);
+    }
+    await browser.scripting.executeScript({target: {tabId: tab.id}, files: contentScripts});
     status.textContent = 'Whitelisted. The floating button will appear on future visits.';
   } catch (error) { status.textContent = `Could not finish whitelisting: ${error.message}`; }
   finally { await updateButtons(); }

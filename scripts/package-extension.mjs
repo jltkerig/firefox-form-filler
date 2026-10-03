@@ -45,11 +45,9 @@ const isBlank = value => Array.isArray(value) ? value.length === 0 :
 if (!isBlank(defaults)) throw new Error('Packaged defaults contain saved answers.');
 
 const contentScript = readFileSync(new URL('autofill.js', output), 'utf8');
-for (const [name, expected] of [['PROFILE', defaults.profile], ['OPTIONAL', defaults.optional]]) {
-  const match = contentScript.match(new RegExp(`  const ${name} = (\\{[\\s\\S]*?\\n  \\});`));
-  if (!match || JSON.stringify(JSON.parse(match[1])) !== JSON.stringify(expected)) {
-    throw new Error(`Packaged ${name} does not match blank profile defaults.`);
-  }
+if (!contentScript.includes('const PROFILE = structuredClone(JAMIE_DEFAULTS.profile);') ||
+    !contentScript.includes('const OPTIONAL = structuredClone(JAMIE_DEFAULTS.optional);')) {
+  throw new Error('Packaged autofill does not use the shared blank profile defaults.');
 }
 
 console.log(`Packaged ${files.length} approved extension files for version ${manifest.version}.`);

@@ -71,5 +71,11 @@ for (const legacy of ['fillTextFields', 'fillYesNo', 'fillCurrentEmployeeCheckbo
 }
 assert.doesNotMatch(read('scripts/package-extension.mjs'), /icons\/icon-\d+\.png/,
   'the package must not duplicate the manifest SVG with unused PNG icons');
+assert.match(autofill, /const PROFILE = structuredClone\(JAMIE_DEFAULTS\.profile\);/,
+  'autofill must use the shared profile defaults instead of duplicating the schema');
+for (const source of [read('popup.js'), read('background.js')]) {
+  assert.match(source, /\['defaults\.js', 'autofill\.js'\]/,
+    'registered content scripts must load shared defaults before autofill');
+}
 
 console.log('Privacy contract checks passed (static source checks; live Firefox behavior still needs testing).');
