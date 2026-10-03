@@ -37,12 +37,7 @@ These rules replace all earlier versions of these protection rules. Preserve exi
 
 8. Normal backup commits, pushes, and syncs do not require separate confirmation when their destinations and contents are already authorized. Never force-push or resolve conflicts by discarding work without following the confirmation process below.
 
-9. The PUBLIC repository may contain only source code, documentation, and sanitized sample data. Never publish:
-   - Passwords, API keys, tokens, or credentials.
-   - .env files or other secret configuration.
-   - Private personal information.
-   - Collected Facebook posts or private group content.
-   - Real job-search datasets or private application records.
+9. The public repository may contain source code, documentation, sanitized sample data, and versioned unsigned Firefox Developer Edition XPI files built solely from verified publishable source in this repository. Updating the authorized XPI, `updates.json`, and installation page does not require a new version-specific Rule 9 exception. Before publishing, verify the package contents, version, extension ID, and SHA-256 hash. Never publish passwords, credentials, `.env` files, private personal information, collected Facebook content, real job-search datasets, private application records, profiles, or saved-page reports.
 
 10. Keep credentials, .env files, and sensitive project data in an appropriately protected local backup. Do not upload them to another repository or service. Uploading personal datasets or collected Facebook content requires my explicit authorization for both the content and destination.
 
