@@ -1,10 +1,12 @@
 html { overflow: hidden; }
-body { --page:#f7f9fc;--text:#17233b;--muted:#536078;--secondary:#e6ebf3;width:420px;min-height:650px;box-sizing:border-box;overflow:hidden;padding:20px;margin:0;font:14px/1.45 system-ui,sans-serif;color:var(--text);background:var(--page); }
+html[data-auth-pending] body { visibility: hidden; }
+body { --page:#f7f9fc;--text:#17233b;--muted:#536078;--secondary:#e6ebf3;width:420px;min-height:620px;box-sizing:border-box;overflow:hidden;padding:14px 20px;margin:0;font:14px/1.45 system-ui,sans-serif;color:var(--text);background:var(--page); }
 h1 { font-size: 21px; margin: 0 0 8px; }
 #site { font-weight: 650; overflow-wrap: anywhere; }
 button { width: 100%; padding: 11px; margin: 5px 0; border: 0; border-radius: 8px; cursor: pointer; font: inherit; }
 #enable { background: #194e9e; color: white; }
 #disable { background: var(--secondary); color: var(--text); }
+#lock-now { background: var(--secondary); color: var(--text); }
 button:disabled { opacity: .45; cursor: default; }
 details { margin: 8px 0; }
 summary { cursor: pointer; font-weight: 650; }

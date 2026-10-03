@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Unlock Firefox Form Filler</title><link rel="stylesheet" href="login.css"></head>
+<body><main>
+  <div class="mark" aria-hidden="true">JK</div>
+  <h1 id="title">Unlock Job Autofill</h1>
+  <p id="intro">Enter your local password to access saved answers and filling tools.</p>
+  <form id="login-form">
+    <label>Password<input id="password" type="password" autocomplete="current-password" minlength="10" required autofocus></label>
+    <label id="confirm-row" hidden>Confirm password<input id="confirm-password" type="password" autocomplete="new-password" minlength="10"></label>
+    <button id="submit" type="submit">Unlock</button>
+  </form>
+  <p id="status" role="status" aria-live="polite"></p>
+  <small>This local lock deters casual access. It does not encrypt Firefox extension storage or protect against someone with access to your browser profile.</small>
+</main><script src="auth.js"></script><script src="login.js"></script></body>
+</html>

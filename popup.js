@@ -81,6 +81,10 @@ disable.addEventListener('click', async () => {
 initialize().catch(error => { status.textContent = error.message; });
 
 document.getElementById('edit-profile').addEventListener('click', () => browser.runtime.openOptionsPage());
+document.getElementById('lock-now').addEventListener('click', async () => {
+  await browser.runtime.sendMessage({type: 'lock-extension'});
+  location.replace('login.html');
+});
 
 // Runs only after the popup button is clicked. It reads form structure, never
 // input values, cookies, storage, hidden controls, or complete page HTML.

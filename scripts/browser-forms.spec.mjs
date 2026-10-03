@@ -51,17 +51,17 @@ async function review(page) {
 test('popup fits without scrollbars and saves the selected theme', async ({page}) => {
   await page.setViewportSize({width:420,height:650});
   await page.addInitScript(() => {
-    const stored={settings:{bitwardenCompatibilityMode:true,theme:'light'}};
+    const stored={settings:{bitwardenCompatibilityMode:true,theme:'light'},authConfig:{version:1}};
     globalThis.__themeWrites=[];
     globalThis.browser={
-      runtime:{getManifest:()=>({version:'1.6.0'}),openOptionsPage:async()=>{}},
+      runtime:{getManifest:()=>({version:'1.6.0'}),openOptionsPage:async()=>{},sendMessage:async()=>true},
       storage:{local:{
         get:async keys=>{
           const names=Array.isArray(keys)?keys:[keys];
           return Object.fromEntries(names.filter(name=>name in stored).map(name=>[name,stored[name]]));
         },
         set:async values=>{Object.assign(stored,values);globalThis.__themeWrites.push(structuredClone(values));}
-      }},
+      },session:{get:async()=>({authUnlocked:true})}},
       scripting:{getRegisteredContentScripts:async()=>[]},
       tabs:{query:async()=>[{id:1,url:'https://careers.example/apply'}]},
       permissions:{contains:async()=>false}
@@ -90,7 +90,7 @@ test('options shows active variants, mappings, and backup health',async({page})=
     profileVariants:[{id:'default',name:'Default',data:profile},{id:'technical',name:'Technical',data:profile}],activeProfileVariant:'technical',
     learnedFields:[],ignoredFields:[],siteMappings:[{key:'m1',question:'city',name:'city',elementId:'',placeholder:'',type:'text',host:'jobs.example',label:'City',section:'profile',profileKey:'city',updatedAt:1}],
     settings:{bitwardenCompatibilityMode:false,theme:'system',lastProfileExportAt:'2026-10-03T00:00:00.000Z'}};
-    globalThis.browser={storage:{local:{get:async keys=>{const names=Array.isArray(keys)?keys:[keys];return Object.fromEntries(names.filter(key=>key in stored).map(key=>[key,structuredClone(stored[key])]))},set:async values=>Object.assign(stored,structuredClone(values))}}};
+    globalThis.browser={storage:{local:{get:async keys=>{const names=Array.isArray(keys)?keys:[keys];return Object.fromEntries(names.filter(key=>key in stored).map(key=>[key,structuredClone(stored[key])]))},set:async values=>Object.assign(stored,structuredClone(values))},session:{get:async()=>({authUnlocked:true})}}};
   },syntheticProfile);
   await page.goto(optionsUrl);
   await expect(page.locator('#profile-variant')).toHaveValue('technical');

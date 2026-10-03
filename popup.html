@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-auth-pending>
 <head><meta charset="utf-8"><title>Firefox Form Filler</title><link rel="stylesheet" href="popup.css"></head>
-<body>
+<body data-auth-script="popup.js">
   <h1>Job Autofill</h1><p id="version"></p>
   <p id="site">Checking this website…</p>
   <p>Whitelist a trusted application website to show the floating button on future visits. Use Review & Fill to preview answers before applying them.</p>
@@ -18,8 +18,9 @@
     <label class="theme-setting">Theme<select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </details>
   <button id="edit-profile">Edit my profile</button>
+  <button id="lock-now">Lock now</button>
   <details><summary>Whitelisted websites</summary><ul id="whitelist"></ul></details>
   <small>Your saved answers stay in this extension until you fill a form or copy them. Forms can read answers immediately after filling. Never submits an application.</small>
-  <script src="theme.js"></script><script src="popup.js"></script>
+  <script src="theme.js"></script><script src="auth.js"></script><script src="page-gate.js"></script>
 </body>
 </html>
