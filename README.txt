@@ -148,6 +148,12 @@ checked in the build environment. Live Firefox/ATS interaction was not available
 for automated browser testing, so test the new field-memory control on a sample
 application before relying on it for a large batch of applications.
 
+The repeatable Chromium harness (`npm run test:browser`) exercises the content
+script with synthetic answers on a local form, the saved large-form fixture, SPA
+body replacement, the W3C labeled-controls page and httpbin's public demo form.
+It never clicks a form's submit button. This verifies real browser DOM behavior,
+but not Firefox extension registration, signing, or authenticated ATS behavior.
+
 The repository includes docs/large-form-test.html, a synthetic page that creates
 1,500 fields, an open Shadow DOM section, an embedded same-origin form and a
 25,000-option dropdown. Use it only as a disposable performance fixture; it

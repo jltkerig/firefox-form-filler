@@ -24,3 +24,5 @@ dist/
 web-ext-artifacts/
 # Local dependencies
 node_modules/
+test-results/
+playwright-report/
