@@ -5,6 +5,7 @@ const root = new URL('../', import.meta.url);
 const defaultsPath = fileURLToPath(new URL('defaults.js', root));
 const autofillPath = fileURLToPath(new URL('autofill.js', root));
 const largeFixtureUrl = pathToFileURL(fileURLToPath(new URL('docs/large-form-test.html', root))).href;
+const popupUrl = pathToFileURL(fileURLToPath(new URL('popup.html', root))).href;
 const syntheticProfile = {
   profile: {
     firstName:'Test', lastName:'Applicant', fullName:'Test Applicant', email:'autofill@example.invalid',
@@ -41,6 +42,38 @@ async function review(page) {
   await expect(panel.locator('h2')).toHaveText('Review before filling');
   return panel;
 }
+
+test('popup fits without scrollbars and saves the selected theme', async ({page}) => {
+  await page.setViewportSize({width:420,height:600});
+  await page.addInitScript(() => {
+    const stored={settings:{bitwardenCompatibilityMode:true,theme:'light'}};
+    globalThis.__themeWrites=[];
+    globalThis.browser={
+      runtime:{getManifest:()=>({version:'1.4.3'}),openOptionsPage:async()=>{}},
+      storage:{local:{
+        get:async keys=>{
+          const names=Array.isArray(keys)?keys:[keys];
+          return Object.fromEntries(names.filter(name=>name in stored).map(name=>[name,stored[name]]));
+        },
+        set:async values=>{Object.assign(stored,values);globalThis.__themeWrites.push(structuredClone(values));}
+      }},
+      scripting:{getRegisteredContentScripts:async()=>[]},
+      tabs:{query:async()=>[{id:1,url:'https://careers.example/apply'}]},
+      permissions:{contains:async()=>false}
+    };
+  });
+  await page.goto(popupUrl);
+  await expect(page.locator('#theme')).toHaveValue('light');
+  const size=await page.evaluate(()=>({
+    scrollWidth:document.body.scrollWidth,scrollHeight:document.body.scrollHeight,
+    clientWidth:document.documentElement.clientWidth,clientHeight:document.documentElement.clientHeight
+  }));
+  expect(size.scrollWidth).toBeLessThanOrEqual(size.clientWidth);
+  expect(size.scrollHeight).toBeLessThanOrEqual(size.clientHeight);
+  await page.locator('#theme').selectOption('dark');
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  expect(await page.evaluate(()=>globalThis.__themeWrites.at(-1).settings)).toEqual({bitwardenCompatibilityMode:true,theme:'dark'});
+});
 
 test('fills recognized fields, preserves existing values, and skips credentials', async ({page}) => {
   await page.setContent(`<form>

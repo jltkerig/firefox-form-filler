@@ -20,6 +20,7 @@ function assertBlank(value, path = 'defaults') {
 
 assertBlank(defaultsContext.JAMIE_DEFAULTS);
 assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'storage']);
+assert.deepEqual(manifest.optional_permissions, ['downloads']);
 assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
 assert.match(read('README.txt'), new RegExp(`^FIREFOX FORM FILLER - VERSION ${manifest.version.replaceAll('.', '\\.')}`, 'm'),
   'README and manifest versions must match');
@@ -56,6 +57,19 @@ assert.match(autofill, /REVIEW_SCAN_LIMITS/,
   'shadow DOM discovery must remain bounded');
 assert.doesNotMatch(read('popup.js'), /allFrames\s*:\s*true|all_frames\s*:\s*true/,
   'iframe origins must not be filled without a separate trust design');
+const popup = read('popup.js');
+assert.match(read('popup.html'), /<script src="theme\.js"><\/script>/,
+  'the popup must load the shared theme controller');
+assert.match(read('options.html'), /<script src="theme\.js"><\/script>/,
+  'the options page must load the shared theme controller');
+assert.match(read('popup.html'), />Save page for fixing</,
+  'the popup must expose the private page capture under Page tools');
+assert.match(popup, /permissions\.request\(\{permissions: \['downloads'\]\}\)/,
+  'page capture must request download access only when the user saves');
+assert.match(popup, /saveAs: true/,
+  'page capture must let the user choose the authorized private folder');
+assert.match(popup, /hostname: location\.hostname/,
+  'page capture must identify the site without recording its full URL');
 assert.match(autofill, /privacy:'Contains structural field metadata only; no entered answers, cookies, storage, or page HTML\.'/,
   'failure reports must state their privacy boundary');
 const failureRecord = autofill.match(/function failureRecord\(item\) \{([\s\S]*?)\n  \}\n  function downloadFailureReport/);

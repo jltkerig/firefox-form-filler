@@ -1,11 +1,11 @@
 (() => {
   'use strict';
 
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
   const EXPORT_FORMAT = 'firefox-form-filler-private-profile';
   const MAX_LEARNED_FIELDS = 2000;
   const MAX_TEXT_LENGTH = 20000;
-  const SETTINGS_DEFAULTS = Object.freeze({bitwardenCompatibilityMode: false});
+  const SETTINGS_DEFAULTS = Object.freeze({bitwardenCompatibilityMode: false, theme: 'system'});
   const learnedKeys = ['id', 'question', 'name', 'placeholder', 'type', 'host', 'label', 'answer'];
 
   function text(value, path) {
@@ -61,7 +61,10 @@
 
   function normalizeSettings(source = {}) {
     if (!source || typeof source !== 'object' || Array.isArray(source)) throw new Error('settings must be an object.');
-    return {bitwardenCompatibilityMode: source.bitwardenCompatibilityMode === true};
+    return {
+      bitwardenCompatibilityMode: source.bitwardenCompatibilityMode === true,
+      theme: ['system','light','dark'].includes(source.theme) ? source.theme : 'system'
+    };
   }
 
   function validateExport(source) {

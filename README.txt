@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.4.2
+FIREFOX FORM FILLER - VERSION 1.4.3
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -116,6 +116,20 @@ PERMISSION AND SPA RESILIENCE - NEW IN 1.4.0
 Removing site access in Firefox now unregisters matching stale content scripts.
 A throttled observer restores only the Review & Fill launcher when a trusted
 single-page application replaces its page body; it does not scan or fill fields.
+
+SAVE PAGE FOR FIXING - NEW IN 1.4.3
+Open Page tools from the extension icon and choose Save page for fixing. Firefox
+opens a Save As window; select the private firefox-form-filler-saved-pages
+folder. The versioned JSON report contains the hostname and sanitized form
+structure, not entered answers, hidden fields, cookies, extension storage, or
+full page HTML. Inline JavaScript is excluded unless you explicitly select it;
+because inline code can contain private data, keep those reports private and
+review every report before sharing it.
+
+THEME AND POPUP SIZE - NEW IN 1.4.3
+Choose System, Light, or Dark in either the extension popup or profile page.
+The preference is stored locally and shared by both screens. The popup is sized
+to show its normal closed sections without horizontal or vertical scrollbars.
 
 CUSTOM DROPDOWNS
 Supports standard dropdowns and common accessible combobox/listbox menus. For

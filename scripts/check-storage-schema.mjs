@@ -14,22 +14,25 @@ runInNewContext(read('defaults.js'), context);
 runInNewContext(read('storage-schema.js'), context);
 
 await context.FFF_STORAGE.migrateStorage();
-assert.equal(stored.profileSchemaVersion, 1);
+assert.equal(stored.profileSchemaVersion, 2);
 assert.equal(stored.settings.bitwardenCompatibilityMode, false);
+assert.equal(stored.settings.theme, 'system');
 assert.deepEqual(stored.learnedFields, []);
 
 const candidate = {
   format: context.FFF_STORAGE.EXPORT_FORMAT,
-  schemaVersion: 1,
+  schemaVersion: 2,
   data: {
     jamieProfile: structuredClone(stored.jamieProfile),
     learnedFields: [{id:'fixture',question:'preferred location',answer:'Remote',updatedAt:1}],
-    settings: {bitwardenCompatibilityMode:true}
+    settings: {bitwardenCompatibilityMode:true,theme:'dark'}
   }
 };
 const validated = context.FFF_STORAGE.validateExport(candidate);
 assert.equal(validated.learnedFields[0].answer, 'Remote');
 assert.equal(validated.settings.bitwardenCompatibilityMode, true);
+assert.equal(validated.settings.theme, 'dark');
+assert.equal(context.FFF_STORAGE.normalizeSettings({theme:'invalid'}).theme, 'system');
 assert.throws(() => context.FFF_STORAGE.validateExport({...candidate, schemaVersion:99}), /not supported/);
 assert.throws(() => context.FFF_STORAGE.validateExport({...candidate, data:{...candidate.data, learnedFields:'invalid'}}), /must be a list/);
 const futureField = context.FFF_STORAGE.normalizeProfile({...stored.jamieProfile, profile:{...stored.jamieProfile.profile, futureField:'keep me'}}, true);

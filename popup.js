@@ -5,6 +5,9 @@ const status = document.getElementById('status');
 document.getElementById('version').textContent = `Version ${browser.runtime.getManifest().version}`;
 let tab, pattern, id;
 const contentScripts = ['defaults.js', 'autofill.js'];
+const themeSelect=document.getElementById('theme');
+browser.storage.local.get('settings').then(saved=>{themeSelect.value=FFF_THEME.apply(saved.settings?.theme);});
+themeSelect.addEventListener('change',async()=>{const theme=FFF_THEME.apply(themeSelect.value),saved=await browser.storage.local.get('settings');await browser.storage.local.set({settings:{...saved.settings,theme}});});
 
 async function refreshList() {
   const entries = (await browser.scripting.getRegisteredContentScripts()).filter(e => e.id.startsWith('jamie-'));
@@ -137,7 +140,7 @@ function captureCurrentForm(includeInline) {
       budget -= code.length;
       return {length, code, truncated: code.length < length};
     });
-  return {format: 'firefox-form-example-v1', capturedAt: new Date().toISOString(),
+  return {format: 'firefox-page-fixing-v1', capturedAt: new Date().toISOString(), hostname: location.hostname,
     note: 'Review before sharing. Form values, hidden fields, cookies, and storage were not captured. Inline JavaScript may contain private data if included.',
     fields, javascript: {externalScripts, inlineScripts, inlineIncluded: !!includeInline}};
 }
@@ -145,6 +148,8 @@ function captureCurrentForm(includeInline) {
 saveExample.addEventListener('click', async () => {
   saveExample.disabled = true;
   try {
+    const granted = await browser.permissions.request({permissions: ['downloads']});
+    if (!granted) throw new Error('Firefox needs download permission to show the Save As window.');
     const includeInline = document.getElementById('include-inline-js').checked;
     const [result] = await browser.scripting.executeScript({
       target: {tabId: tab.id}, func: captureCurrentForm, args: [includeInline]
@@ -152,14 +157,16 @@ saveExample.addEventListener('click', async () => {
     if (!result?.result) throw new Error('No form data was returned.');
     const blob = new Blob([JSON.stringify(result.result, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `form-example-${new Date().toISOString().slice(0, 10)}.private.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    status.textContent = `Saved a local form example with ${result.result.fields.length} fields. Review the file before sharing.`;
+    const safeHostname = result.result.hostname.replace(/[^a-z0-9.-]+/gi, '-').slice(0, 80) || 'page';
+    try {
+      await browser.downloads.download({
+        url,
+        filename: `page-for-fixing-${safeHostname}-${new Date().toISOString().slice(0, 10)}.private.json`,
+        saveAs: true,
+        conflictAction: 'uniquify'
+      });
+    } finally { setTimeout(() => URL.revokeObjectURL(url), 60000); }
+    status.textContent = `Saved a private fixing report with ${result.result.fields.length} fields. Review it before sharing.`;
   } catch (error) {
     status.textContent = `Could not save this page: ${error.message}`;
   } finally { saveExample.disabled = false; }

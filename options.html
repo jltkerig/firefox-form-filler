@@ -6,6 +6,7 @@
 <label class="file">Choose a private profile backup to preview<input id="import-file" type="file" accept="application/json,.json"></label>
 <div id="import-preview" hidden><p id="import-summary"></p><button id="apply-import" type="button">Apply this import</button><button id="cancel-import" type="button" class="secondary">Cancel</button></div>
 <label class="setting"><input id="bitwarden-mode" type="checkbox"> Bitwarden compatibility mode (hide field-memory controls around sign-in and password fields)</label>
+<label>Theme<select id="theme"><option value="system">Use system theme</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
 </section>
 <section class="tools" aria-labelledby="memory-heading"><h2 id="memory-heading">Remembered fields</h2>
 <p>Review answers learned from application pages. Changes stay in local extension storage and never fill a page until you approve them in Review &amp; Fill.</p>
@@ -13,4 +14,4 @@
 <p id="memory-count"></p><div id="memory-list"></div>
 </section>
 <form id="profile"><div id="fields"></div><div class="save"><button id="save-profile" type="submit" disabled>Save profile</button><span id="status" role="status"></span></div></form>
-</main><script src="defaults.js"></script><script src="storage-schema.js"></script><script src="options.js"></script></body></html>
+</main><script src="defaults.js"></script><script src="storage-schema.js"></script><script src="theme.js"></script><script src="options.js"></script></body></html>

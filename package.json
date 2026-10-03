@@ -1,6 +1,6 @@
 {
   "name": "firefox-form-filler",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "private": true,
   "scripts": {
     "test:browser": "playwright test scripts/browser-forms.spec.mjs --reporter=line"

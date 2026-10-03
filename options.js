@@ -79,6 +79,7 @@ async function init(){
   const saved=await browser.storage.local.get(['jamieProfile','settings','learnedFields']);
   const data=saved.jamieProfile||JAMIE_DEFAULTS;
   learnedFields=FFF_STORAGE.normalizeLearnedFields(saved.learnedFields||[]);renderLearnedFields();
+  document.getElementById('theme').value=FFF_THEME.apply(saved.settings?.theme);
   document.getElementById('bitwarden-mode').checked = FFF_STORAGE.normalizeSettings(saved.settings).bitwardenCompatibilityMode;
   for(const [name,title] of [['profile','Contact and professional profile'],['optional','Application answers']]){
     const group=section(title);
@@ -95,6 +96,10 @@ async function init(){
   }
 }
 document.getElementById('memory-search').addEventListener('input',renderLearnedFields);
+document.getElementById('theme').addEventListener('change',async event=>{
+  const theme=FFF_THEME.apply(event.target.value), saved=await browser.storage.local.get('settings');
+  await browser.storage.local.set({settings:{...saved.settings,theme}});
+});
 function downloadJson(data, filename) {
   const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
   const link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();
@@ -142,7 +147,7 @@ document.getElementById('profile').addEventListener('submit',async event=>{
   if(data.optional.ssnLastFour && !/^\d{4}$/.test(data.optional.ssnLastFour)){status.textContent='Enter exactly four digits for the SSN ending, or leave it blank.';return;}
   data.profile.jobs=jobControls.map(({fields})=>Object.fromEntries(Object.entries(fields).map(([key,el])=>[key,el.value.trim()])));
   data.profile.education=schoolControls.map(({fields})=>Object.values(fields).map(el=>el.value.trim()));
-  const settings={bitwardenCompatibilityMode:document.getElementById('bitwarden-mode').checked};
+  const settings={bitwardenCompatibilityMode:document.getElementById('bitwarden-mode').checked,theme:FFF_THEME.normalize(document.getElementById('theme').value)};
   try {await browser.storage.local.set({jamieProfile:data,settings,profileSchemaVersion:FFF_STORAGE.SCHEMA_VERSION});status.textContent='Saved. Your next preview will use these answers.';}
   catch {status.textContent='Could not save. Please try again.';}
 });
