@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Firefox Form Filler",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Enable trusted application sites, autofill forms, and learn custom fields from a floating field-side control.",
   "permissions": [
     "activeTab",
@@ -13,6 +13,8 @@
   ],
   "background": {
     "scripts": [
+      "defaults.js",
+      "storage-schema.js",
       "background.js"
     ]
   },

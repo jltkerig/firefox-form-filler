@@ -1,8 +1,14 @@
 (() => {
   'use strict';
   if (globalThis.__jamieJobAutofill) return;
+  let launcherObserver = null;
+  let launcherRepairTimer = null;
+  let destroyed = false;
   globalThis.__jamieJobAutofill = {
     destroy() {
+      destroyed = true;
+      launcherObserver?.disconnect();
+      clearTimeout(launcherRepairTimer);
       ['jk-autofill-launcher', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
         .forEach(id => document.getElementById(id)?.remove());
       delete globalThis.__jamieJobAutofill;
@@ -1429,6 +1435,8 @@
 
 
   let LEARNED_FIELDS = [];
+  let SETTINGS = {bitwardenCompatibilityMode: false};
+  let memoryUiInstalled = false;
   let activeMemoryField = null;
   let memoryButton = null;
   let memoryMenu = null;
@@ -1524,6 +1532,14 @@
       /\b(?:last|final|ending)\s*(?:4|four)\b/.test(desc);
   }
 
+  function isCredentialControl(el) {
+    if (!SETTINGS.bitwardenCompatibilityMode) return false;
+    const autocomplete = normalize(el?.getAttribute?.('autocomplete'));
+    const descriptor = `${getDescriptor(el)} ${memoryQuestionText(el)}`;
+    return el?.type === 'password' || /(?:^| )(?:username|current password|new password|one time code)(?: |$)/.test(autocomplete) ||
+      /\b(?:sign in|log in|login|username|password|passcode|one time code|verification code)\b/.test(descriptor);
+  }
+
   function choiceGroup(el) {
     if (el.type === 'radio' && el.name) {
       return [...document.querySelectorAll('input[type="radio"]')]
@@ -1589,6 +1605,8 @@
   }
 
   function ensureMemoryControls() {
+    if (memoryButton && !memoryButton.isConnected) memoryButton = null;
+    if (memoryMenu && !memoryMenu.isConnected) memoryMenu = null;
     if (!memoryButton) {
       memoryButton = document.createElement('button');
       memoryButton.id = 'jk-field-memory-button';
@@ -1645,7 +1663,7 @@
   }
 
   function updateMemoryControl(el) {
-    if (!el || !isVisible(el) || isMemoryUnsafe(el) || el.closest('#jk-autofill-panel,#jk-review-host,#jk-field-memory-menu')) {
+    if (!el || !isVisible(el) || isMemoryUnsafe(el) || isCredentialControl(el) || el.closest('#jk-autofill-panel,#jk-review-host,#jk-field-memory-menu')) {
       if (memoryButton) memoryButton.style.display = 'none';
       if (memoryMenu) memoryMenu.style.display = 'none';
       return;
@@ -1670,6 +1688,8 @@
 
   function installMemoryFieldUI() {
     ensureMemoryControls();
+    if (memoryUiInstalled) return;
+    memoryUiInstalled = true;
     document.addEventListener('focusin', event => {
       const el = event.target;
       if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement || isCustom(el)) {
@@ -1691,12 +1711,13 @@
   }
 
   async function loadSavedProfile() {
-    const saved = await browser.storage.local.get(['jamieProfile', 'learnedFields']);
+    const saved = await browser.storage.local.get(['jamieProfile', 'learnedFields', 'settings']);
     if (saved.jamieProfile) {
       Object.assign(PROFILE, saved.jamieProfile.profile);
       Object.assign(OPTIONAL, saved.jamieProfile.optional);
     }
     LEARNED_FIELDS = Array.isArray(saved.learnedFields) ? saved.learnedFields : [];
+    SETTINGS = {bitwardenCompatibilityMode: saved.settings?.bitwardenCompatibilityMode === true};
   }
   const reviewSelector = 'input, textarea, select, [role="combobox"], button[aria-haspopup="listbox"], [role="checkbox"], [role="radio"], [contenteditable="true"][role="textbox"], [contenteditable="true"][aria-label]';
   const REVIEW_SCAN_LIMITS = Object.freeze({fields: 1000, shadowRoots: 24, shadowHostNodes: 12000});
@@ -2142,6 +2163,38 @@
     await delay(175);
     return el.value === String(item.value);
   }
+  function reportText(value, limit) {
+    return normalize(value)
+      .replace(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi, '[email]')
+      .replace(/\b(?:\+?\d[\s().-]*){10,}\b/g, '[phone]')
+      .replace(/https?:\/\/\S+/gi, '[url]')
+      .slice(0, limit);
+  }
+  function failureRecord(item) {
+    const el = item.el;
+    const attributes = {};
+    for (const name of ['aria-label','aria-labelledby','aria-describedby','aria-required','aria-invalid','aria-haspopup','aria-expanded','aria-controls','role','autocomplete','inputmode']) {
+      const value = el?.getAttribute?.(name);
+      if (value) attributes[name] = reportText(value, 160);
+    }
+    return {
+      fieldType: normalize(el?.type || el?.getAttribute?.('role') || el?.tagName || 'unknown').slice(0, 80),
+      label: reportText(item.label, 240),
+      hostname: location.hostname,
+      reason: reportText(item.reason || 'Needs manual review', 240),
+      aria: attributes
+    };
+  }
+  function downloadFailureReport(items) {
+    const unique = [...new Map(items.map(item => [JSON.stringify(failureRecord(item)), item])).values()];
+    const report = {format:'firefox-form-filler-failure-report',schemaVersion:1,createdAt:new Date().toISOString(),
+      privacy:'Contains structural field metadata only; no entered answers, cookies, storage, or page HTML.',
+      hostname:location.hostname,failures:unique.map(failureRecord)};
+    const url = URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
+    const link = document.createElement('a');link.href=url;
+    link.download=`form-failure-${location.hostname}-${new Date().toISOString().slice(0,10)}.private.json`;
+    document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
   function showReview() {
     document.getElementById('jk-review-host')?.remove();
     const host = document.createElement('div');
@@ -2166,6 +2219,7 @@
     const result = document.createElement('p'); result.setAttribute('role','status');
     result.textContent = `${proposals.length} proposed · ${attention.length} need attention`; box.appendChild(result);
     const links = document.createElement('div'); box.appendChild(links);
+    let reportItems = attention;
     function renderAttention(items) {
       links.replaceChildren();
       for (const item of items) {
@@ -2177,6 +2231,8 @@
       }
     }
     renderAttention(attention);
+    const report = document.createElement('button'); report.textContent = 'Save privacy-safe failure report';
+    report.hidden = !attention.length; report.onclick = () => downloadFailureReport(reportItems); box.appendChild(report);
     const apply = document.createElement('button'); apply.id = 'apply'; apply.textContent = 'Fill selected answers'; apply.disabled = !proposals.length; box.appendChild(apply);
     apply.onclick = async () => {
       apply.disabled = true;
@@ -2190,6 +2246,8 @@
       }
       const remaining = collectReview().attention;
       const needs = [...new Map([...remaining,...failures,...skipped].map(item=>[item.el,item])).values()];
+      reportItems = needs;
+      report.hidden = !needs.length;
       result.textContent = `${filled} filled · ${needs.length} need review`;
       renderAttention(needs);
     };
@@ -2583,7 +2641,7 @@
 
   loadSavedProfile().catch(() => {});
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && (changes.jamieProfile || changes.learnedFields)) {
+    if (area === 'local' && (changes.jamieProfile || changes.learnedFields || changes.settings)) {
       loadSavedProfile().then(() => activeMemoryField && updateMemoryControl(activeMemoryField)).catch(() => {});
     }
   });
@@ -2630,6 +2688,7 @@
   }
 
   function init() {
+    if (destroyed || !document.body) return;
     if (
       document.getElementById(
         'jk-autofill-launcher'
@@ -2663,6 +2722,16 @@
       button
     );
     installMemoryFieldUI();
+    if (!launcherObserver) {
+      launcherObserver = new MutationObserver(() => {
+        if (destroyed || document.getElementById('jk-autofill-launcher') || launcherRepairTimer) return;
+        launcherRepairTimer = setTimeout(() => {
+          launcherRepairTimer = null;
+          if (!destroyed && !document.getElementById('jk-autofill-launcher')) init();
+        }, 300);
+      });
+      launcherObserver.observe(document.documentElement, {childList:true, subtree:true});
+    }
   }
 
   /*

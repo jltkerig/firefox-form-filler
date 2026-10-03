@@ -2,6 +2,7 @@ const enable = document.getElementById('enable');
 const disable = document.getElementById('disable');
 const saveExample = document.getElementById('save-example');
 const status = document.getElementById('status');
+document.getElementById('version').textContent = `Version ${browser.runtime.getManifest().version}`;
 let tab, pattern, id;
 
 async function refreshList() {

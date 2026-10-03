@@ -7,3 +7,28 @@ browser.runtime.onMessage.addListener((message, sender, respond) => {
     .then(respond, () => respond(false));
   return true;
 });
+
+async function migrateProfile() {
+  try { await FFF_STORAGE.migrateStorage(); }
+  catch (error) { console.error('Profile migration was not applied:', error); }
+}
+
+async function reconcileRemovedOrigins(permissions) {
+  const removed = new Set((permissions?.origins || []).filter(origin => origin.startsWith('https://')));
+  if (!removed.size) return;
+  const entries = (await browser.scripting.getRegisteredContentScripts()).filter(entry => entry.id.startsWith('jamie-'));
+  for (const entry of entries) {
+    const matches = entry.matches || [];
+    const remaining = matches.filter(match => !removed.has(match));
+    if (remaining.length === matches.length) continue;
+    if (remaining.length) await browser.scripting.updateContentScripts([{id: entry.id, matches: remaining}]);
+    else await browser.scripting.unregisterContentScripts({ids: [entry.id]});
+  }
+}
+
+browser.permissions.onRemoved.addListener(permissions => {
+  reconcileRemovedOrigins(permissions).catch(error => console.error('Could not reconcile removed site access:', error));
+});
+browser.runtime.onInstalled.addListener(migrateProfile);
+browser.runtime.onStartup.addListener(migrateProfile);
+migrateProfile();

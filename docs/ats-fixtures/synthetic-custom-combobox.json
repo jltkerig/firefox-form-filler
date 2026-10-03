@@ -1,0 +1,28 @@
+{
+  "format": "firefox-form-filler-ats-fixture",
+  "schemaVersion": 1,
+  "source": "synthetic",
+  "hostname": "careers.example",
+  "fields": [
+    {
+      "fieldType": "combobox",
+      "label": "country",
+      "reason": "custom listbox choice was not verified",
+      "aria": {
+        "role": "combobox",
+        "aria-haspopup": "listbox",
+        "aria-expanded": "false",
+        "aria-controls": "country-options"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "professional profile url",
+      "reason": "framework reverted the entered value",
+      "aria": {
+        "autocomplete": "url",
+        "aria-required": "true"
+      }
+    }
+  ]
+}

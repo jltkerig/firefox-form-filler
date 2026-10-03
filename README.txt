@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.3.0
+FIREFOX FORM FILLER - VERSION 1.4.0
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -80,6 +80,30 @@ answers, employment history and education, then Save profile. Answers are
 stored locally in Firefox, not synchronized or uploaded to a service. Blank
 optional answers are skipped. Learned fields are stored separately, so removing
 a learned field does not alter the main profile.
+
+PRIVATE PROFILE BACKUP AND MIGRATIONS - NEW IN 1.4.0
+The options page can export the profile, remembered fields and compatibility
+setting as a versioned private JSON file. Imports validate the schema and show
+a summary before the separate Apply this import button replaces local data.
+Rejected or cancelled imports do not change storage. Keep exports private: they
+contain saved answers. Storage migrations run before the options page saves.
+
+BITWARDEN COMPATIBILITY MODE - NEW IN 1.4.0
+Enable this option when Bitwarden manages sign-in credentials. Firefox Form
+Filler then hides its field-memory control around username, password, one-time-
+code and sign-in controls while continuing to handle application fields.
+
+FAILURE REPORTS AND ATS FIXTURES - NEW IN 1.4.0
+The review window can save a local privacy-safe failure report. It includes
+only hostname, normalized label, control type, failure reason and a small
+allowlist of relevant ARIA attributes. It never includes the entered answer,
+cookies, extension storage or full page HTML. Review reports before sharing.
+Sanitized synthetic regression fixtures live under docs/ats-fixtures.
+
+PERMISSION AND SPA RESILIENCE - NEW IN 1.4.0
+Removing site access in Firefox now unregisters matching stale content scripts.
+A throttled observer restores only the Review & Fill launcher when a trusted
+single-page application replaces its page body; it does not scan or fill fields.
 
 CUSTOM DROPDOWNS
 Supports standard dropdowns and common accessible combobox/listbox menus. For

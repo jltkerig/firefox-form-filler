@@ -23,7 +23,7 @@ assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
 assert.match(read('README.txt'), new RegExp(`^FIREFOX FORM FILLER - VERSION ${manifest.version.replaceAll('.', '\\.')}`, 'm'),
   'README and manifest versions must match');
 
-for (const name of ['autofill.js', 'background.js', 'options.js', 'popup.js']) {
+for (const name of ['autofill.js', 'background.js', 'options.js', 'popup.js', 'storage-schema.js']) {
   const source = read(name);
   assert.doesNotMatch(source, /browser\.storage\.sync|chrome\.storage\.sync/,
     `${name} must keep answers in Firefox local storage`);
@@ -54,5 +54,15 @@ assert.match(autofill, /REVIEW_SCAN_LIMITS/,
   'shadow DOM discovery must remain bounded');
 assert.doesNotMatch(read('popup.js'), /allFrames\s*:\s*true|all_frames\s*:\s*true/,
   'iframe origins must not be filled without a separate trust design');
+assert.match(autofill, /privacy:'Contains structural field metadata only; no entered answers, cookies, storage, or page HTML\.'/,
+  'failure reports must state their privacy boundary');
+const failureRecord = autofill.match(/function failureRecord\(item\) \{([\s\S]*?)\n  \}\n  function downloadFailureReport/);
+assert.ok(failureRecord, 'failure report serializer must exist');
+assert.doesNotMatch(failureRecord[1], /(?:\.value|\.answer)/,
+  'failure report records must not include field values or saved answers');
+assert.match(read('options.js'), /Import preview ready\. Nothing has been changed\./,
+  'imports must have a non-mutating preview step');
+assert.match(read('background.js'), /permissions\.onRemoved/,
+  'revoked site permissions must be reconciled');
 
 console.log('Privacy contract checks passed (static source checks; live Firefox behavior still needs testing).');

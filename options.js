@@ -2,6 +2,7 @@ const container = document.getElementById('fields');
 const status = document.getElementById('status');
 const controls = [];
 const jobControls = [], schoolControls = [];
+let pendingImport = null;
 const friendly = {
   eeoGender:'EEO gender (exact choice shown on applications)',
   eeoHispanicLatino:'EEO Hispanic or Latino (Yes, No, or exact choice)',
@@ -42,8 +43,10 @@ function addRecord(parent, record, keys, destination) {
   remove.onclick=()=>{article.remove();destination.splice(destination.indexOf(entry),1);};article.appendChild(remove);
 }
 async function init(){
-  const saved=await browser.storage.local.get('jamieProfile');
+  await FFF_STORAGE.migrateStorage();
+  const saved=await browser.storage.local.get(['jamieProfile','settings']);
   const data=saved.jamieProfile||JAMIE_DEFAULTS;
+  document.getElementById('bitwarden-mode').checked = FFF_STORAGE.normalizeSettings(saved.settings).bitwardenCompatibilityMode;
   for(const [name,title] of [['profile','Contact and professional profile'],['optional','Application answers']]){
     const group=section(title);
     const merged={...JAMIE_DEFAULTS[name],...data[name]};
@@ -58,6 +61,46 @@ async function init(){
     const add=document.createElement('button');add.type='button';add.textContent=label;add.onclick=()=>addRecord(parent,{},keys,destination);parent.appendChild(add);
   }
 }
+function downloadJson(data, filename) {
+  const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+document.getElementById('export-profile').addEventListener('click',async()=>{
+  try {
+    await FFF_STORAGE.migrateStorage();
+    const saved=await browser.storage.local.get(['jamieProfile','learnedFields','settings']);
+    downloadJson({format:FFF_STORAGE.EXPORT_FORMAT,schemaVersion:FFF_STORAGE.SCHEMA_VERSION,
+      exportedAt:new Date().toISOString(),data:{jamieProfile:saved.jamieProfile||JAMIE_DEFAULTS,
+        learnedFields:saved.learnedFields||[],settings:FFF_STORAGE.normalizeSettings(saved.settings)}},
+      `firefox-form-filler-profile-v${FFF_STORAGE.SCHEMA_VERSION}-${new Date().toISOString().slice(0,10)}.private.json`);
+    status.textContent='Private profile exported. Store it somewhere protected.';
+  } catch {status.textContent='Could not export the private profile.';}
+});
+document.getElementById('import-file').addEventListener('change',async event=>{
+  pendingImport=null;document.getElementById('import-preview').hidden=true;
+  try {
+    const file=event.target.files[0];if(!file)return;
+    if(file.size>5_000_000)throw new Error('The selected file is too large.');
+    pendingImport=FFF_STORAGE.validateExport(JSON.parse(await file.text()));
+    const populated=Object.values(pendingImport.jamieProfile.profile).filter(value=>typeof value==='string'&&value).length+
+      Object.values(pendingImport.jamieProfile.optional).filter(Boolean).length;
+    document.getElementById('import-summary').textContent=`Validated schema ${FFF_STORAGE.SCHEMA_VERSION}: ${populated} populated profile fields and ${pendingImport.learnedFields.length} remembered fields. Applying will replace the current saved profile, remembered fields, and compatibility setting.`;
+    document.getElementById('import-preview').hidden=false;status.textContent='Import preview ready. Nothing has been changed.';
+  } catch(error){status.textContent=`Import rejected: ${error.message}`;event.target.value='';}
+});
+document.getElementById('apply-import').addEventListener('click',async()=>{
+  if(!pendingImport)return;
+  try {
+    await browser.storage.local.set({...pendingImport,profileSchemaVersion:FFF_STORAGE.SCHEMA_VERSION});
+    status.textContent='Imported successfully. Reloading the validated profileâ€¦';
+    setTimeout(()=>location.reload(),300);
+  } catch {status.textContent='Could not apply the import. Existing data was left in place.';}
+});
+document.getElementById('cancel-import').addEventListener('click',()=>{
+  pendingImport=null;document.getElementById('import-file').value='';document.getElementById('import-preview').hidden=true;
+  status.textContent='Import cancelled. Nothing was changed.';
+});
 document.getElementById('profile').addEventListener('submit',async event=>{
   event.preventDefault();
   const data={profile:{},optional:{}};
@@ -65,7 +108,8 @@ document.getElementById('profile').addEventListener('submit',async event=>{
   if(data.optional.ssnLastFour && !/^\d{4}$/.test(data.optional.ssnLastFour)){status.textContent='Enter exactly four digits for the SSN ending, or leave it blank.';return;}
   data.profile.jobs=jobControls.map(({fields})=>Object.fromEntries(Object.entries(fields).map(([key,el])=>[key,el.value.trim()])));
   data.profile.education=schoolControls.map(({fields})=>Object.values(fields).map(el=>el.value.trim()));
-  try {await browser.storage.local.set({jamieProfile:data});status.textContent='Saved. Your next preview will use these answers.';}
+  const settings={bitwardenCompatibilityMode:document.getElementById('bitwarden-mode').checked};
+  try {await browser.storage.local.set({jamieProfile:data,settings,profileSchemaVersion:FFF_STORAGE.SCHEMA_VERSION});status.textContent='Saved. Your next preview will use these answers.';}
   catch {status.textContent='Could not save. Please try again.';}
 });
-init().then(() => {document.getElementById('save-profile').disabled=false;}).catch(()=>{status.textContent='Could not load the profile. Close and reopen this page.';});
+init().then(() => {document.getElementById('save-profile').disabled=false;document.getElementById('export-profile').disabled=false;}).catch(()=>{status.textContent='Could not load or migrate the profile. Existing storage was not replaced.';});
