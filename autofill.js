@@ -24,11 +24,11 @@
     #jk-field-memory-button {position:fixed!important;z-index:2147483647!important;width:28px!important;height:28px!important;
       min-width:28px!important;min-height:28px!important;padding:0!important;margin:0!important;border:2px solid #fff!important;
       border-radius:999px!important;background:#194e9e!important;color:#fff!important;box-shadow:0 2px 8px #0005!important;
-      font:700 16px/24px system-ui,sans-serif!important;text-align:center!important;cursor:pointer!important;display:none!important;}
+      font:700 16px/24px system-ui,sans-serif!important;text-align:center!important;cursor:pointer!important;display:none;}
     #jk-field-memory-button[data-saved="true"] {background:#2f7d45!important;}
     #jk-field-memory-menu {position:fixed!important;z-index:2147483647!important;width:210px!important;padding:8px!important;
       margin:0!important;background:#fff!important;color:#222!important;border:1px solid #cfcfcf!important;border-radius:10px!important;
-      box-shadow:0 8px 28px #0004!important;font:13px system-ui,sans-serif!important;display:none!important;}
+      box-shadow:0 8px 28px #0004!important;font:13px system-ui,sans-serif!important;display:none;}
     #jk-field-memory-menu .jk-memory-title {font-weight:700!important;margin:2px 4px 7px!important;white-space:nowrap!important;
       overflow:hidden!important;text-overflow:ellipsis!important;}
     #jk-field-memory-menu button {display:block!important;width:100%!important;margin:4px 0!important;padding:8px 9px!important;
@@ -989,6 +989,7 @@
 
   let LEARNED_FIELDS = [];
   let IGNORED_FIELDS = [];
+  let SITE_MAPPINGS = [];
   const MEMORY_LIMITS = Object.freeze({records: 2000, answerLength: 20000});
   let SETTINGS = {bitwardenCompatibilityMode: false};
   let memoryUiInstalled = false;
@@ -1074,6 +1075,21 @@
       if (score > bestScore) { best = saved; bestScore = score; }
     }
     return bestScore >= 6 ? best : null;
+  }
+  function findSiteMapping(el) {
+    let best=null,bestScore=0;
+    for(const saved of SITE_MAPPINGS){const score=ignoredMatchScore(saved,el);if(score>bestScore){best=saved;bestScore=score;}}
+    return bestScore>=6?best:null;
+  }
+  async function mapCurrentField(el) {
+    if(!el||!el.isConnected||isMemoryUnsafe(el)){toast('This field cannot be mapped safely.');return;}
+    const reference=prompt('Map to a profile field, for example profile.city or optional.authorizedToWork:','');
+    if(reference===null)return;const [section,profileKey]=reference.trim().split('.');
+    if(!['profile','optional'].includes(section)||!Object.hasOwn(JAMIE_DEFAULTS[section],profileKey)||Array.isArray(JAMIE_DEFAULTS[section][profileKey])){toast('That profile field was not recognized.');return;}
+    const identity=ignoredIdentity(el),existing=findSiteMapping(el),record={key:existing?.key||`mapping-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+      ...identity,label:memoryDisplayLabel(el),section,profileKey,updatedAt:Date.now()};
+    SITE_MAPPINGS=existing?SITE_MAPPINGS.map(item=>item.key===existing.key?record:item):[...SITE_MAPPINGS,record];
+    await browser.storage.local.set({siteMappings:SITE_MAPPINGS});toast(`Mapped this field to ${section}.${profileKey}.`);
   }
 
   async function setIgnoredField(el, ignored) {
@@ -1244,7 +1260,9 @@
         <div class="jk-memory-title">Field memory</div>
         <button type="button" data-memory="remember">Remember this field</button>
         <button type="button" data-memory="update">Update this field</button>
-        <button type="button" data-memory="remove">Remove this field</button>`;
+        <button type="button" data-memory="remove">Remove this field</button>
+        <button type="button" data-memory="map">Map to profile field</button>
+        <button type="button" data-memory="ignore">Ignore this field</button>`;
       memoryMenu.addEventListener('mousedown', event => event.preventDefault());
       memoryMenu.addEventListener('click', async event => {
         const button = event.target.closest('button[data-memory]');
@@ -1252,6 +1270,8 @@
         event.preventDefault(); event.stopPropagation();
         memoryMenu.style.display = 'none';
         if (button.dataset.memory === 'remove') await removeCurrentField();
+        else if(button.dataset.memory==='map')await mapCurrentField(activeMemoryField);
+        else if(button.dataset.memory==='ignore')await setIgnoredField(activeMemoryField,!findIgnoredField(activeMemoryField));
         else await rememberCurrentField(button.dataset.memory);
       });
       document.body.appendChild(memoryMenu);
@@ -1278,7 +1298,7 @@
   }
 
   function updateMemoryControl(el) {
-    if (!el || !isVisible(el) || isMemoryUnsafe(el) || isCredentialControl(el) || findIgnoredField(el) || el.closest('#jk-autofill-panel,#jk-review-host,#jk-field-memory-menu')) {
+    if (!el || !isVisible(el) || isMemoryUnsafe(el) || isCredentialControl(el) || el.closest('#jk-autofill-panel,#jk-review-host,#jk-field-memory-menu')) {
       if (memoryButton) memoryButton.style.display = 'none';
       if (memoryMenu) memoryMenu.style.display = 'none';
       return;
@@ -1294,6 +1314,7 @@
     const remember = memoryMenu.querySelector('[data-memory="remember"]');
     const update = memoryMenu.querySelector('[data-memory="update"]');
     const remove = memoryMenu.querySelector('[data-memory="remove"]');
+    memoryMenu.querySelector('[data-memory="ignore"]').textContent=findIgnoredField(el)?'Use this field again':'Ignore this field';
     remember.disabled = !!saved;
     update.disabled = !saved;
     remove.disabled = !saved;
@@ -1326,13 +1347,14 @@
   }
 
   async function loadSavedProfile() {
-    const saved = await browser.storage.local.get(['jamieProfile', 'learnedFields', 'ignoredFields', 'settings']);
+    const saved = await browser.storage.local.get(['jamieProfile', 'learnedFields', 'ignoredFields', 'siteMappings', 'settings']);
     if (saved.jamieProfile) {
       Object.assign(PROFILE, saved.jamieProfile.profile);
       Object.assign(OPTIONAL, saved.jamieProfile.optional);
     }
     LEARNED_FIELDS = Array.isArray(saved.learnedFields) ? saved.learnedFields : [];
     IGNORED_FIELDS = Array.isArray(saved.ignoredFields) ? saved.ignoredFields : [];
+    SITE_MAPPINGS = Array.isArray(saved.siteMappings) ? saved.siteMappings : [];
     SETTINGS = {bitwardenCompatibilityMode: saved.settings?.bitwardenCompatibilityMode === true};
   }
   const reviewSelector = 'input, textarea, select, [role="combobox"], button[aria-haspopup="listbox"], [role="checkbox"], [role="radio"], [contenteditable="true"][role="textbox"], [contenteditable="true"][aria-label]';
@@ -1506,6 +1528,9 @@
     if (isRecordDetailsPage() || /\bminimally acceptable rate of pay\b/.test(direct)) return null;
     // Legal acknowledgements require a fresh, manual decision on each page.
     if (isConsentQuestion(el)) return null;
+    const mapped=findSiteMapping(el);
+    if(mapped){const raw=(mapped.section==='profile'?PROFILE:OPTIONAL)[mapped.profileKey],typed=typedAnswer(el,raw);
+      if(typed)return {value:typed,siteMapped:true,matchReason:`Site mapping → ${mapped.section}.${mapped.profileKey}`,confidence:'High'};}
     if (isWorkPreferenceQuestion(el) && OPTIONAL.employmentType) return workPreferenceAnswer(el);
     const configuredChoice = configuredChoiceAnswer(el);
     if (configuredChoice !== undefined) return configuredChoice;
@@ -1517,12 +1542,12 @@
       const wanted = normalize(learned.answer);
       if (el.type === 'radio' || el.getAttribute('role') === 'radio') {
         const option = normalize(getLabelText(el) || el.textContent || el.value || '');
-        if (option === wanted || normalize(el.value || '') === wanted) return {value: String(learned.answer), learned: true};
+        if (option === wanted || normalize(el.value || '') === wanted) return {value: String(learned.answer), learned: true,matchReason:'Exact remembered field',confidence:'High'};
       } else if (el.type === 'checkbox' || el.getAttribute('role') === 'checkbox') {
-        if (['yes','true','checked','1'].includes(wanted)) return {value: String(learned.answer), learned: true};
+        if (['yes','true','checked','1'].includes(wanted)) return {value: String(learned.answer), learned: true,matchReason:'Exact remembered field',confidence:'High'};
       } else {
         const typed=typedAnswer(el,learned.answer);
-        return typed?{value:typed,learned:true}:null;
+        return typed?{value:typed,learned:true,matchReason:'Exact remembered field',confidence:'High'}:null;
       }
     }
     if (isChoice(el)) {
@@ -1726,12 +1751,12 @@
     return attention;
   }
   function collectReview() {
-    const proposals = [], attention = [], seen = new Set(), attentionGroups = new Set();
+    const proposals = [], attention = [], seen = new Set(), attentionGroups = new Set();let ignored=0,preserved=0;
     const discovered = discoverReviewElements();
     for (const el of discovered.fields) {
       if (!isVisible(el) || el.readOnly || el.getAttribute('aria-disabled') === 'true' ||
         el.closest('#jk-autofill-panel') || ['hidden','submit','button','reset','password','image'].includes(el.type) && !isCustom(el)) continue;
-      if (findIgnoredField(el)) continue;
+      if (findIgnoredField(el)){ignored++;continue;}
       if (el.closest('[role="combobox"]') && el.closest('[role="combobox"]') !== el) continue;
       if (seen.has(el)) continue;
       seen.add(el);
@@ -1741,8 +1766,9 @@
       const choiceAnswered = el.type === 'radio' ? peers(el).some(isChecked) :
         checkboxGroup ? peers(el).some(isChecked) : isChoice(el) && isChecked(el);
       if (item.value && el.type !== 'file') {
-        if (proposedAnswerIsCurrent(el, item)) continue;
+        if (proposedAnswerIsCurrent(el, item)){preserved++;continue;}
         item.replaceExisting = currentAnswer(el);
+        if(!item.matchReason){item.matchReason=item.learned?'Exact remembered field':el.getAttribute('autocomplete')?'Profile rule plus autocomplete':'Built-in profile and label rule';item.confidence=item.learned||el.getAttribute('autocomplete')?'High':'Medium';}
         if (el instanceof HTMLSelectElement && !matchingOption([...el.options], item)) {
           attention.push({...item, reason: 'Saved answer is not an available option'});
         } else if (!candidateFits(el, item.value)) {
@@ -1771,7 +1797,7 @@
       label: 'Large or deeply nested form',
       reason: `Safety scan limit reached (${REVIEW_SCAN_LIMITS.fields} fields or ${REVIEW_SCAN_LIMITS.shadowRoots} open shadow roots); review remaining fields manually`
     });
-    return {proposals, attention};
+    return {proposals, attention, ignored, preserved};
   }
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   async function chooseCustom(item) {
@@ -1824,6 +1850,13 @@
     await delay(175);
     return el.value === String(item.value);
   }
+  function validationReason(item) {
+    const el=item.el,described=(el?.getAttribute?.('aria-describedby')||'').split(/\s+/).map(id=>rootElementById(el,id)?.textContent||'').join(' ').trim();
+    if(el?.getAttribute?.('aria-invalid')==='true')return `Website marked this field invalid${described?`: ${described.slice(0,160)}`:''}`;
+    if(el?.validity&&!el.validity.valid)return el.validationMessage||'Browser validation rejected this value';
+    if(currentAnswer(el)&&!proposedAnswerIsCurrent(el,item))return 'Website reverted or changed the filled value';
+    return 'Could not verify filling; review manually';
+  }
   function reportText(value, limit) {
     return normalize(value)
       .replace(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi, '[email]')
@@ -1870,18 +1903,19 @@
     const note = document.createElement('p'); note.textContent = 'Uncheck any answer you do not want filled. Custom dropdown options are checked when you apply. Review each job’s minimum requirements.'; box.appendChild(note);
     const close = document.createElement('button'); close.textContent = 'Close'; close.onclick = () => host.remove(); box.appendChild(close);
     const copy = document.createElement('button'); copy.textContent = 'Copy saved answers'; copy.onclick = () => {host.remove();openPanel();}; box.appendChild(copy);
-    const {proposals, attention} = collectReview();
+    const {proposals, attention, ignored, preserved} = collectReview();
     const selections = proposals.map(item => {
       const row = document.createElement('label'), check = document.createElement('input'); check.type = 'checkbox'; check.checked = !item.replaceExisting;
       row.append(check, document.createTextNode(item.label));
       const answer = document.createElement('small'); answer.textContent = item.value; row.appendChild(answer); box.appendChild(row);
+      const why=document.createElement('small');why.textContent=`${item.confidence} confidence · ${item.matchReason}`;row.appendChild(why);
       if (item.replaceExisting) {
         const warning = document.createElement('small'); warning.textContent = 'Already contains an answer — select to replace it.'; row.appendChild(warning);
       }
       return {item,check};
     });
     const result = document.createElement('p'); result.setAttribute('role','status');
-    result.textContent = `${proposals.length} proposed · ${attention.length} need attention`; box.appendChild(result);
+    result.textContent = `${proposals.length} proposed · ${preserved} matching answers preserved · ${ignored} ignored · ${attention.length} need attention`; box.appendChild(result);
     const links = document.createElement('div'); box.appendChild(links);
     let reportItems = attention;
     function renderAttention(items) {
@@ -1905,14 +1939,14 @@
       for (const {item,check} of selections) {
         check.disabled = true;
         if (!check.checked) {skipped.push({...item,reason:'Skipped in review'});continue;}
-        try { if (await applyReviewed(item)) filled++; else failures.push({...item,reason:'Could not verify filling; review manually'}); }
+        try { if (await applyReviewed(item)) filled++; else failures.push({...item,reason:validationReason(item)}); }
         catch { failures.push({...item,reason:'Could not fill; review manually'}); }
       }
       const remaining = collectReview().attention;
       const needs = [...new Map([...remaining,...failures,...skipped].map(item=>[item.el,item])).values()];
       reportItems = needs;
       report.hidden = !needs.length;
-      result.textContent = `${filled} filled · ${needs.length} need review`;
+      result.textContent = `${filled} filled and verified · ${skipped.length} preserved or skipped · ${ignored} ignored · ${needs.length} need review`;
       renderAttention(needs);
     };
     document.body.appendChild(host);
@@ -2302,7 +2336,7 @@
 
   loadSavedProfile().catch(() => {});
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && (changes.jamieProfile || changes.learnedFields || changes.ignoredFields || changes.settings)) {
+    if (area === 'local' && (changes.jamieProfile || changes.learnedFields || changes.ignoredFields || changes.siteMappings || changes.settings)) {
       loadSavedProfile().then(() => activeMemoryField && updateMemoryControl(activeMemoryField)).catch(() => {});
     }
   });

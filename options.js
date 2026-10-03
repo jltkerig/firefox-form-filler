@@ -5,6 +5,7 @@ const jobControls = [], schoolControls = [];
 let pendingImport = null;
 let learnedFields = [];
 let ignoredFields = [];
+let siteMappings = [], profileVariants = [], activeProfileVariant = 'default';
 const friendly = {
   eeoGender:'EEO gender (exact choice shown on applications)',
   eeoHispanicLatino:'EEO Hispanic or Latino (Yes, No, or exact choice)',
@@ -96,12 +97,37 @@ function renderIgnoredFields() {
     article.append(title,meta,remove);list.appendChild(article);
   }
 }
+function renderMappings() {
+  const list=document.getElementById('mapping-list');list.replaceChildren();
+  document.getElementById('mapping-count').textContent=`${siteMappings.length} answer-free site mappings.`;
+  for(const item of siteMappings) {
+    const article=document.createElement('article'),title=document.createElement('strong'),meta=document.createElement('small'),remove=document.createElement('button');
+    title.textContent=(item.label||item.question||'Unlabeled field').slice(0,240);
+    meta.textContent=`${item.host} · ${item.section}.${item.profileKey}`;remove.type='button';remove.className='danger';remove.textContent='Remove mapping';
+    remove.onclick=async()=>{if(!confirm(`Remove only the site mapping “${title.textContent}” on ${item.host}?`))return;
+      siteMappings=siteMappings.filter(saved=>saved!==item);await browser.storage.local.set({siteMappings});renderMappings();status.textContent='Site mapping removed.';};
+    article.append(title,meta,remove);list.appendChild(article);
+  }
+}
+function renderVariants() {
+  const select=document.getElementById('profile-variant');select.replaceChildren();
+  for(const variant of profileVariants){const option=document.createElement('option');option.value=variant.id;option.textContent=variant.name;select.appendChild(option);}
+  select.value=activeProfileVariant;document.getElementById('delete-variant').disabled=profileVariants.length<2;
+}
+function updateStorageHealth(saved) {
+  const approximate=new Blob([JSON.stringify(saved)]).size;
+  const last=saved.settings?.lastProfileExportAt?new Date(saved.settings.lastProfileExportAt).toLocaleString():'Never';
+  document.getElementById('storage-health').textContent=`Storage health: about ${(approximate/1024).toFixed(1)} KB · ${learnedFields.length} remembered · ${ignoredFields.length} ignored · ${siteMappings.length} mappings · last private export: ${last}.`;
+}
 async function init(){
   await FFF_STORAGE.migrateStorage();
-  const saved=await browser.storage.local.get(['jamieProfile','settings','learnedFields','ignoredFields']);
+  const saved=await browser.storage.local.get(['jamieProfile','profileVariants','activeProfileVariant','settings','learnedFields','ignoredFields','siteMappings']);
   const data=saved.jamieProfile||JAMIE_DEFAULTS;
   learnedFields=FFF_STORAGE.normalizeLearnedFields(saved.learnedFields||[]);renderLearnedFields();
   ignoredFields=FFF_STORAGE.normalizeIgnoredFields(saved.ignoredFields||[]);renderIgnoredFields();
+  siteMappings=FFF_STORAGE.normalizeSiteMappings(saved.siteMappings||[]);renderMappings();
+  profileVariants=FFF_STORAGE.normalizeProfileVariants(saved.profileVariants,data);activeProfileVariant=saved.activeProfileVariant||profileVariants[0].id;renderVariants();
+  updateStorageHealth(saved);
   document.getElementById('theme').value=FFF_THEME.apply(saved.settings?.theme);
   document.getElementById('bitwarden-mode').checked = FFF_STORAGE.normalizeSettings(saved.settings).bitwardenCompatibilityMode;
   for(const [name,title] of [['profile','Contact and professional profile'],['optional','Application answers']]){
@@ -120,6 +146,26 @@ async function init(){
 }
 document.getElementById('memory-search').addEventListener('input',renderLearnedFields);
 document.getElementById('ignored-search').addEventListener('input',renderIgnoredFields);
+document.getElementById('profile-variant').addEventListener('change',async event=>{
+  const variant=profileVariants.find(item=>item.id===event.target.value);if(!variant)return;
+  if(!confirm(`Switch to “${variant.name}”? Save current edits first; unsaved form changes will be discarded.`)){event.target.value=activeProfileVariant;return;}
+  await browser.storage.local.set({activeProfileVariant:variant.id,jamieProfile:variant.data});location.reload();
+});
+document.getElementById('new-variant').addEventListener('click',async()=>{
+  const name=prompt('Name the new variant. It will duplicate the currently saved variant.');if(!name?.trim())return;
+  if(profileVariants.length>=20){status.textContent='The 20-variant limit has been reached.';return;}
+  const id=`variant-${Date.now().toString(36)}`,base=profileVariants.find(item=>item.id===activeProfileVariant);
+  profileVariants.push({id,name:name.trim().slice(0,80),data:structuredClone(base.data)});await browser.storage.local.set({profileVariants,activeProfileVariant:id,jamieProfile:base.data});location.reload();
+});
+document.getElementById('rename-variant').addEventListener('click',async()=>{
+  const variant=profileVariants.find(item=>item.id===activeProfileVariant),name=prompt('Rename this variant.',variant.name);if(!name?.trim())return;
+  variant.name=name.trim().slice(0,80);await browser.storage.local.set({profileVariants});renderVariants();status.textContent='Variant renamed.';
+});
+document.getElementById('delete-variant').addEventListener('click',async()=>{
+  if(profileVariants.length<2)return;const variant=profileVariants.find(item=>item.id===activeProfileVariant);
+  if(!confirm(`Delete only the profile variant “${variant.name}”? Its saved answers will be removed. Export a private backup first if needed.`))return;
+  profileVariants=profileVariants.filter(item=>item!==variant);const next=profileVariants[0];await browser.storage.local.set({profileVariants,activeProfileVariant:next.id,jamieProfile:next.data});location.reload();
+});
 document.getElementById('theme').addEventListener('change',async event=>{
   const theme=FFF_THEME.apply(event.target.value), saved=await browser.storage.local.get('settings');
   await browser.storage.local.set({settings:{...saved.settings,theme}});
@@ -132,11 +178,13 @@ function downloadJson(data, filename) {
 document.getElementById('export-profile').addEventListener('click',async()=>{
   try {
     await FFF_STORAGE.migrateStorage();
-    const saved=await browser.storage.local.get(['jamieProfile','learnedFields','ignoredFields','settings']);
+    const saved=await browser.storage.local.get(['jamieProfile','profileVariants','activeProfileVariant','learnedFields','ignoredFields','siteMappings','settings']);
+    const exportedAt=new Date().toISOString(),settings={...FFF_STORAGE.normalizeSettings(saved.settings),lastProfileExportAt:exportedAt};
     downloadJson({format:FFF_STORAGE.EXPORT_FORMAT,schemaVersion:FFF_STORAGE.SCHEMA_VERSION,
-      exportedAt:new Date().toISOString(),data:{jamieProfile:saved.jamieProfile||JAMIE_DEFAULTS,
-        learnedFields:saved.learnedFields||[],ignoredFields:saved.ignoredFields||[],settings:FFF_STORAGE.normalizeSettings(saved.settings)}},
+      exportedAt,data:{jamieProfile:saved.jamieProfile||JAMIE_DEFAULTS,profileVariants:saved.profileVariants||[],activeProfileVariant:saved.activeProfileVariant,
+        learnedFields:saved.learnedFields||[],ignoredFields:saved.ignoredFields||[],siteMappings:saved.siteMappings||[],settings}},
       `firefox-form-filler-profile-v${FFF_STORAGE.SCHEMA_VERSION}-${new Date().toISOString().slice(0,10)}.private.json`);
+    await browser.storage.local.set({settings});document.getElementById('storage-health').textContent=document.getElementById('storage-health').textContent.replace(/last private export: [^.]*\./,`last private export: ${new Date(exportedAt).toLocaleString()}.`);
     status.textContent='Private profile exported. Store it somewhere protected.';
   } catch {status.textContent='Could not export the private profile.';}
 });
@@ -148,7 +196,7 @@ document.getElementById('import-file').addEventListener('change',async event=>{
     pendingImport=FFF_STORAGE.validateExport(JSON.parse(await file.text()));
     const populated=Object.values(pendingImport.jamieProfile.profile).filter(value=>typeof value==='string'&&value).length+
       Object.values(pendingImport.jamieProfile.optional).filter(Boolean).length;
-    document.getElementById('import-summary').textContent=`Validated schema ${FFF_STORAGE.SCHEMA_VERSION}: ${populated} populated profile fields, ${pendingImport.learnedFields.length} remembered fields, and ${pendingImport.ignoredFields.length} ignored fields. Applying will replace the current saved profile, remembered fields, ignored fields, and settings.`;
+    document.getElementById('import-summary').textContent=`Validated schema ${FFF_STORAGE.SCHEMA_VERSION}: ${populated} populated fields, ${pendingImport.profileVariants.length} variants, ${pendingImport.learnedFields.length} remembered fields, ${pendingImport.ignoredFields.length} ignored fields, and ${pendingImport.siteMappings.length} mappings. Applying replaces those saved records and settings.`;
     document.getElementById('import-preview').hidden=false;status.textContent='Import preview ready. Nothing has been changed.';
   } catch(error){status.textContent=`Import rejected: ${error.message}`;event.target.value='';}
 });
@@ -172,7 +220,9 @@ document.getElementById('profile').addEventListener('submit',async event=>{
   data.profile.jobs=jobControls.map(({fields})=>Object.fromEntries(Object.entries(fields).map(([key,el])=>[key,el.value.trim()])));
   data.profile.education=schoolControls.map(({fields})=>Object.values(fields).map(el=>el.value.trim()));
   const settings={bitwardenCompatibilityMode:document.getElementById('bitwarden-mode').checked,theme:FFF_THEME.normalize(document.getElementById('theme').value)};
-  try {await browser.storage.local.set({jamieProfile:data,settings,profileSchemaVersion:FFF_STORAGE.SCHEMA_VERSION});status.textContent='Saved. Your next preview will use these answers.';}
+  try {const prior=await browser.storage.local.get('settings');settings.lastProfileExportAt=FFF_STORAGE.normalizeSettings(prior.settings).lastProfileExportAt;
+    profileVariants=profileVariants.map(item=>item.id===activeProfileVariant?{...item,data}:item);
+    await browser.storage.local.set({jamieProfile:data,profileVariants,activeProfileVariant,settings,profileSchemaVersion:FFF_STORAGE.SCHEMA_VERSION});status.textContent='Saved. Your next preview will use this variant.';}
   catch {status.textContent='Could not save. Please try again.';}
 });
 init().then(() => {document.getElementById('save-profile').disabled=false;document.getElementById('export-profile').disabled=false;}).catch(()=>{status.textContent='Could not load or migrate the profile. Existing storage was not replaced.';});

@@ -6,6 +6,7 @@ const defaultsPath = fileURLToPath(new URL('defaults.js', root));
 const autofillPath = fileURLToPath(new URL('autofill.js', root));
 const largeFixtureUrl = pathToFileURL(fileURLToPath(new URL('docs/large-form-test.html', root))).href;
 const popupUrl = pathToFileURL(fileURLToPath(new URL('popup.html', root))).href;
+const optionsUrl = pathToFileURL(fileURLToPath(new URL('options.html', root))).href;
 const syntheticProfile = {
   profile: {
     firstName:'Test', lastName:'Applicant', fullName:'Test Applicant', email:'autofill@example.invalid',
@@ -16,14 +17,14 @@ const syntheticProfile = {
   optional: {authorizedToWork:'Yes', requiresSponsorship:'No', desiredHoursPerWeek:'40', earliestStartDate:'10/15/2026'}
 };
 
-async function injectAutofill(page) {
-  await page.evaluate(profile => {
+async function injectAutofill(page, overrides={}) {
+  await page.evaluate(({profile,overrides}) => {
     const originalAttachShadow = Element.prototype.attachShadow;
     Element.prototype.attachShadow = function(options) {
       return originalAttachShadow.call(this, {...options, mode:'open'});
     };
     const listeners=[], messageListeners=[];
-    const stored={jamieProfile:profile,learnedFields:[],ignoredFields:[],settings:{bitwardenCompatibilityMode:false}};
+    const stored={jamieProfile:profile,learnedFields:[],ignoredFields:[],siteMappings:[],settings:{bitwardenCompatibilityMode:false},...overrides};
     globalThis.__storageWrites=[];
     globalThis.__sendContentMessage=message=>Promise.all(messageListeners.map(listener=>listener(message)));
     globalThis.browser={
@@ -34,7 +35,7 @@ async function injectAutofill(page) {
         onChanged:{addListener:listener=>listeners.push(listener)}
       }
     };
-  }, syntheticProfile);
+  }, {profile:syntheticProfile,overrides});
   await page.addScriptTag({path:defaultsPath});
   await page.addScriptTag({path:autofillPath});
   await expect(page.locator('#jk-autofill-launcher')).toBeVisible();
@@ -53,7 +54,7 @@ test('popup fits without scrollbars and saves the selected theme', async ({page}
     const stored={settings:{bitwardenCompatibilityMode:true,theme:'light'}};
     globalThis.__themeWrites=[];
     globalThis.browser={
-      runtime:{getManifest:()=>({version:'1.5.1'}),openOptionsPage:async()=>{}},
+      runtime:{getManifest:()=>({version:'1.6.0'}),openOptionsPage:async()=>{}},
       storage:{local:{
         get:async keys=>{
           const names=Array.isArray(keys)?keys:[keys];
@@ -84,6 +85,19 @@ test('popup fits without scrollbars and saves the selected theme', async ({page}
   expect(await page.evaluate(()=>globalThis.__themeWrites.at(-1).settings)).toEqual({bitwardenCompatibilityMode:true,theme:'dark'});
 });
 
+test('options shows active variants, mappings, and backup health',async({page})=>{
+  await page.addInitScript(profile=>{const stored={profileSchemaVersion:4,jamieProfile:profile,
+    profileVariants:[{id:'default',name:'Default',data:profile},{id:'technical',name:'Technical',data:profile}],activeProfileVariant:'technical',
+    learnedFields:[],ignoredFields:[],siteMappings:[{key:'m1',question:'city',name:'city',elementId:'',placeholder:'',type:'text',host:'jobs.example',label:'City',section:'profile',profileKey:'city',updatedAt:1}],
+    settings:{bitwardenCompatibilityMode:false,theme:'system',lastProfileExportAt:'2026-10-03T00:00:00.000Z'}};
+    globalThis.browser={storage:{local:{get:async keys=>{const names=Array.isArray(keys)?keys:[keys];return Object.fromEntries(names.filter(key=>key in stored).map(key=>[key,structuredClone(stored[key])]))},set:async values=>Object.assign(stored,structuredClone(values))}}};
+  },syntheticProfile);
+  await page.goto(optionsUrl);
+  await expect(page.locator('#profile-variant')).toHaveValue('technical');
+  await expect(page.locator('#mapping-count')).toContainText('1 answer-free');
+  await expect(page.locator('#storage-health')).toContainText('last private export');
+});
+
 test('fills recognized fields, preserves existing values, and skips credentials', async ({page}) => {
   await page.setContent(`<form>
     <label>First name <input name="firstName"></label>
@@ -101,6 +115,7 @@ test('fills recognized fields, preserves existing values, and skips credentials'
   const cityProposal=panel.locator('label').filter({hasText:'City'});
   await expect(cityProposal.getByText('Already contains an answer')).toBeVisible();
   await expect(cityProposal.locator('input[type="checkbox"]')).not.toBeChecked();
+  await expect(panel.getByText(/confidence ·/).first()).toBeVisible();
   await panel.locator('#apply').click();
   await expect(page.locator('[name="firstName"]')).toHaveValue('Test');
   await expect(page.locator('[name="lastName"]')).toHaveValue('Applicant');
@@ -109,6 +124,27 @@ test('fills recognized fields, preserves existing values, and skips credentials'
   await expect(page.locator('[name="startDate"]')).toHaveValue('2026-10-15');
   await expect(page.locator('[name="city"]')).toHaveValue('Keep this');
   await expect(page.locator('[name="password"]')).toHaveValue('');
+});
+
+test('answer-free site mapping fills from the active profile and explains the match', async ({page}) => {
+  await page.route('https://mapped.example/**',route=>route.fulfill({contentType:'text/html',body:'<label>Applicant municipality <input name="municipality-code"></label>'}));
+  await page.goto('https://mapped.example/apply');
+  await injectAutofill(page);
+  page.once('dialog',dialog=>dialog.accept('profile.city'));
+  await page.locator('[name="municipality-code"]').focus();
+  await page.locator('#jk-field-memory-button').click();
+  await page.locator('[data-memory="map"]').click();
+  const panel=await review(page);
+  await expect(panel.getByText('High confidence · Site mapping → profile.city')).toBeVisible();
+  await panel.locator('#apply').click();
+  await expect(page.locator('[name="municipality-code"]')).toHaveValue('Example City');
+});
+
+test('reports when a website reverts a filled value', async ({page}) => {
+  await page.setContent('<label>First name <input name="firstName"></label>');
+  await page.locator('[name="firstName"]').evaluate(el=>el.addEventListener('input',()=>{el.value='Website value';}));
+  await injectAutofill(page);const panel=await review(page);await panel.locator('#apply').click();
+  await expect(panel.getByText(/Website reverted or changed/)).toBeVisible();
 });
 
 test('can explicitly replace an incorrect resume answer', async ({page}) => {

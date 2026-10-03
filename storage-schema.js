@@ -1,13 +1,14 @@
 (() => {
   'use strict';
 
-  const SCHEMA_VERSION = 3;
+  const SCHEMA_VERSION = 4;
   const EXPORT_FORMAT = 'firefox-form-filler-private-profile';
   const MAX_LEARNED_FIELDS = 2000;
   const MAX_TEXT_LENGTH = 20000;
   const SETTINGS_DEFAULTS = Object.freeze({bitwardenCompatibilityMode: false, theme: 'system'});
   const learnedKeys = ['id', 'question', 'name', 'placeholder', 'type', 'host', 'label', 'answer'];
   const ignoredKeys = ['key', 'question', 'name', 'elementId', 'placeholder', 'type', 'host', 'label'];
+  const mappingKeys = [...ignoredKeys, 'section', 'profileKey'];
 
   function text(value, path) {
     if (typeof value !== 'string') throw new Error(`${path} must be text.`);
@@ -73,11 +74,41 @@
     });
   }
 
+  function normalizeSiteMappings(source) {
+    if (!Array.isArray(source)) throw new Error('siteMappings must be a list.');
+    if (source.length > MAX_LEARNED_FIELDS) throw new Error(`siteMappings cannot exceed ${MAX_LEARNED_FIELDS} entries.`);
+    return source.map((item, index) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`siteMappings[${index}] must be an object.`);
+      const record = Object.fromEntries(mappingKeys.map(key => [key, text(item[key] ?? '', `siteMappings[${index}].${key}`)]));
+      if (!['profile','optional'].includes(record.section) || !Object.hasOwn(JAMIE_DEFAULTS[record.section], record.profileKey) ||
+          Array.isArray(JAMIE_DEFAULTS[record.section][record.profileKey])) throw new Error(`siteMappings[${index}] has an invalid profile field.`);
+      const updatedAt = Number(item.updatedAt || 0);
+      if (!Number.isFinite(updatedAt) || updatedAt < 0) throw new Error(`siteMappings[${index}].updatedAt is invalid.`);
+      record.updatedAt = updatedAt;
+      return record;
+    });
+  }
+
+  function normalizeProfileVariants(source, fallback) {
+    const input = Array.isArray(source) && source.length ? source : [{id:'default',name:'Default',data:fallback || JAMIE_DEFAULTS}];
+    if (input.length > 20) throw new Error('Profile variants cannot exceed 20 entries.');
+    const ids = new Set();
+    return input.map((item, index) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`profileVariants[${index}] must be an object.`);
+      const id = text(item.id ?? '', `profileVariants[${index}].id`).trim();
+      const name = text(item.name ?? '', `profileVariants[${index}].name`).trim();
+      if (!/^[a-z0-9-]{1,80}$/.test(id) || ids.has(id)) throw new Error(`profileVariants[${index}].id is invalid.`);
+      if (!name || name.length > 80) throw new Error(`profileVariants[${index}].name is invalid.`);
+      ids.add(id); return {id,name,data:normalizeProfile(item.data || JAMIE_DEFAULTS)};
+    });
+  }
+
   function normalizeSettings(source = {}) {
     if (!source || typeof source !== 'object' || Array.isArray(source)) throw new Error('settings must be an object.');
     return {
       bitwardenCompatibilityMode: source.bitwardenCompatibilityMode === true,
-      theme: ['system','light','dark'].includes(source.theme) ? source.theme : 'system'
+      theme: ['system','light','dark'].includes(source.theme) ? source.theme : 'system',
+      lastProfileExportAt: typeof source.lastProfileExportAt === 'string' ? source.lastProfileExportAt.slice(0,40) : ''
     };
   }
 
@@ -88,24 +119,33 @@
     if (!Number.isInteger(version) || version < 1 || version > SCHEMA_VERSION) {
       throw new Error(`Schema version ${source.schemaVersion ?? 'missing'} is not supported.`);
     }
+    const jamieProfile = normalizeProfile(source.data?.jamieProfile || JAMIE_DEFAULTS);
+    const profileVariants = normalizeProfileVariants(source.data?.profileVariants, jamieProfile);
+    const activeProfileVariant = profileVariants.some(item => item.id === source.data?.activeProfileVariant) ? source.data.activeProfileVariant : profileVariants[0].id;
     return {
-      jamieProfile: normalizeProfile(source.data?.jamieProfile || JAMIE_DEFAULTS),
+      jamieProfile: profileVariants.find(item => item.id === activeProfileVariant).data,
+      profileVariants, activeProfileVariant,
       learnedFields: normalizeLearnedFields(source.data?.learnedFields || []),
       ignoredFields: normalizeIgnoredFields(source.data?.ignoredFields || []),
+      siteMappings: normalizeSiteMappings(source.data?.siteMappings || []),
       settings: normalizeSettings(source.data?.settings || {})
     };
   }
 
   async function migrateStorage() {
-    const saved = await browser.storage.local.get(['profileSchemaVersion', 'jamieProfile', 'learnedFields', 'ignoredFields', 'settings']);
+    const saved = await browser.storage.local.get(['profileSchemaVersion', 'jamieProfile', 'profileVariants', 'activeProfileVariant', 'learnedFields', 'ignoredFields', 'siteMappings', 'settings']);
     const version = Number(saved.profileSchemaVersion || 0);
     if (version > SCHEMA_VERSION) throw new Error('This profile was created by a newer extension version.');
     if (version === SCHEMA_VERSION) return saved;
+    const variants = normalizeProfileVariants(saved.profileVariants, saved.jamieProfile || JAMIE_DEFAULTS);
+    const active = variants.some(item => item.id === saved.activeProfileVariant) ? saved.activeProfileVariant : variants[0].id;
     const migrated = {
       profileSchemaVersion: SCHEMA_VERSION,
-      jamieProfile: normalizeProfile(saved.jamieProfile || JAMIE_DEFAULTS, true),
+      jamieProfile: variants.find(item => item.id === active).data,
+      profileVariants: variants, activeProfileVariant: active,
       learnedFields: normalizeLearnedFields(saved.learnedFields || []),
       ignoredFields: normalizeIgnoredFields(saved.ignoredFields || []),
+      siteMappings: normalizeSiteMappings(saved.siteMappings || []),
       settings: normalizeSettings(saved.settings || {})
     };
     await browser.storage.local.set(migrated);
@@ -114,6 +154,7 @@
 
   globalThis.FFF_STORAGE = Object.freeze({
     SCHEMA_VERSION, EXPORT_FORMAT, SETTINGS_DEFAULTS, normalizeProfile,
-    normalizeLearnedFields, normalizeIgnoredFields, normalizeSettings, validateExport, migrateStorage
+    normalizeLearnedFields, normalizeIgnoredFields, normalizeSiteMappings, normalizeProfileVariants,
+    normalizeSettings, validateExport, migrateStorage
   });
 })();

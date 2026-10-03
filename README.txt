@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.5.1
+FIREFOX FORM FILLER - VERSION 1.6.0
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,28 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+EXPLAINABLE MATCHES AND VALIDATION - NEW IN 1.6.0
+Every proposal identifies its match reason and High or Medium confidence. Results
+separate verified fills, preserved or skipped answers, ignored fields and items
+that the website rejected, reverted or marked invalid. Low-certainty replacement
+behavior remains unchecked and nothing submits automatically.
+
+PROFILE VARIANTS AND SITE MAPPINGS - NEW IN 1.6.0
+The profile editor can duplicate, rename, select and delete named answer variants.
+Variants never switch automatically. The field-side menu can create an answer-
+free site mapping by connecting a hostname-specific field to a profile key such
+as profile.city; the mapping stores no answer. Site mappings can be removed from
+the profile page. The field-side menu also provides Ignore/Use again controls
+when Firefox's native editable-field menu is unavailable on a custom control.
+
+BACKUP HEALTH AND FIXTURE CONVERSION - NEW IN 1.6.0
+The options page shows approximate storage size, record counts and the last
+private export time. A sanitized page-for-fixing report can become a regression
+fixture with `npm run fixture:convert -- <private-report> <fixture-name.json>`.
+The converter writes only to docs/ats-fixtures, replaces common personal-data
+patterns and never copies field values or answers; review every result before
+committing it.
 
 EDIT MY PROFILE
 Choose Edit my profile in the extension menu. New installations start with blank answers. Edit contact information, application

@@ -1,5 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Your autofill profile</title><link rel="stylesheet" href="options.css"></head>
 <body><main><h1>Your autofill profile</h1><p>Edit the answers used in your application previews. Leave optional answers blank to skip them. EEO answers are optional: enter the exact choice you want, then review every proposal before filling. New profiles start blank. Changes are saved locally in this Firefox profile, not in the project files or synced storage. Local extension storage is not an encrypted vault.</p>
+<section class="tools" aria-labelledby="variant-heading"><h2 id="variant-heading">Profile variant</h2>
+<p>Choose the answer set used by Review &amp; Fill. Variants never switch automatically.</p>
+<label>Active variant<select id="profile-variant"></select></label>
+<button id="new-variant" type="button">Duplicate as new variant</button><button id="rename-variant" type="button" class="secondary">Rename variant</button><button id="delete-variant" type="button" class="danger">Delete variant</button>
+</section>
 <section class="tools" aria-labelledby="backup-heading"><h2 id="backup-heading">Private backup and compatibility</h2>
 <p>Export a versioned private backup before replacing or uninstalling the add-on. Keep this file private because it contains your saved answers.</p>
 <button id="export-profile" type="button" disabled>Export private profile</button>
@@ -7,6 +12,11 @@
 <div id="import-preview" hidden><p id="import-summary"></p><button id="apply-import" type="button">Apply this import</button><button id="cancel-import" type="button" class="secondary">Cancel</button></div>
 <label class="setting"><input id="bitwarden-mode" type="checkbox"> Bitwarden compatibility mode (hide field-memory controls around sign-in and password fields)</label>
 <label>Theme<select id="theme"><option value="system">Use system theme</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+<p id="storage-health"></p>
+</section>
+<section class="tools" aria-labelledby="mapping-heading"><h2 id="mapping-heading">Site mappings</h2>
+<p>Answer-free mappings connect one website field to a profile field. Create them from the field-side menu.</p>
+<p id="mapping-count"></p><div id="mapping-list"></div>
 </section>
 <section class="tools" aria-labelledby="memory-heading"><h2 id="memory-heading">Remembered fields</h2>
 <p>Review answers learned from application pages. Changes stay in local extension storage and never fill a page until you approve them in Review &amp; Fill.</p>

@@ -1,9 +1,10 @@
 {
   "name": "firefox-form-filler",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "private": true,
   "scripts": {
-    "test:browser": "playwright test scripts/browser-forms.spec.mjs --reporter=line"
+    "test:browser": "playwright test scripts/browser-forms.spec.mjs --reporter=line",
+    "fixture:convert": "node scripts/convert-page-report.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"
