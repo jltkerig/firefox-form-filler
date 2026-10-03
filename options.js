@@ -4,6 +4,7 @@ const controls = [];
 const jobControls = [], schoolControls = [];
 let pendingImport = null;
 let learnedFields = [];
+let ignoredFields = [];
 const friendly = {
   eeoGender:'EEO gender (exact choice shown on applications)',
   eeoHispanicLatino:'EEO Hispanic or Latino (Yes, No, or exact choice)',
@@ -74,11 +75,33 @@ function renderLearnedFields() {
     article.append(title,meta,label,save,remove);list.appendChild(article);
   }
 }
+async function saveIgnoredFields(next, message) {
+  await browser.storage.local.set({ignoredFields:next});
+  ignoredFields=next;
+  status.textContent=message;
+}
+function renderIgnoredFields() {
+  const list=document.getElementById('ignored-list'), query=document.getElementById('ignored-search').value.trim().toLowerCase();
+  const visible=ignoredFields.filter(item=>`${item.label} ${item.question} ${item.host} ${item.type}`.toLowerCase().includes(query));
+  document.getElementById('ignored-count').textContent=`${visible.length} of ${ignoredFields.length} ignored fields shown.`;
+  list.replaceChildren();
+  for(const item of visible) {
+    const article=document.createElement('article'), title=document.createElement('strong'), meta=document.createElement('small');
+    title.textContent=(item.label||item.question||'Unlabeled field').slice(0,240);
+    meta.textContent=([item.host,item.type].filter(Boolean).join(' · ')||'No website metadata').slice(0,240);
+    const remove=document.createElement('button');remove.type='button';remove.className='danger';remove.textContent='Use this field again';
+    remove.onclick=async()=>{const target=`${title.textContent}${item.host?` on ${item.host}`:''}`;
+      if(!confirm(`Use the ignored field “${target}” again? This removes only its ignore rule.`))return;
+      const next=ignoredFields.filter(saved=>saved!==item);try{await saveIgnoredFields(next,`Removed ignore rule: ${title.textContent}.`);renderIgnoredFields();}catch{status.textContent='Could not remove the ignore rule.';}};
+    article.append(title,meta,remove);list.appendChild(article);
+  }
+}
 async function init(){
   await FFF_STORAGE.migrateStorage();
-  const saved=await browser.storage.local.get(['jamieProfile','settings','learnedFields']);
+  const saved=await browser.storage.local.get(['jamieProfile','settings','learnedFields','ignoredFields']);
   const data=saved.jamieProfile||JAMIE_DEFAULTS;
   learnedFields=FFF_STORAGE.normalizeLearnedFields(saved.learnedFields||[]);renderLearnedFields();
+  ignoredFields=FFF_STORAGE.normalizeIgnoredFields(saved.ignoredFields||[]);renderIgnoredFields();
   document.getElementById('theme').value=FFF_THEME.apply(saved.settings?.theme);
   document.getElementById('bitwarden-mode').checked = FFF_STORAGE.normalizeSettings(saved.settings).bitwardenCompatibilityMode;
   for(const [name,title] of [['profile','Contact and professional profile'],['optional','Application answers']]){
@@ -96,6 +119,7 @@ async function init(){
   }
 }
 document.getElementById('memory-search').addEventListener('input',renderLearnedFields);
+document.getElementById('ignored-search').addEventListener('input',renderIgnoredFields);
 document.getElementById('theme').addEventListener('change',async event=>{
   const theme=FFF_THEME.apply(event.target.value), saved=await browser.storage.local.get('settings');
   await browser.storage.local.set({settings:{...saved.settings,theme}});
@@ -108,10 +132,10 @@ function downloadJson(data, filename) {
 document.getElementById('export-profile').addEventListener('click',async()=>{
   try {
     await FFF_STORAGE.migrateStorage();
-    const saved=await browser.storage.local.get(['jamieProfile','learnedFields','settings']);
+    const saved=await browser.storage.local.get(['jamieProfile','learnedFields','ignoredFields','settings']);
     downloadJson({format:FFF_STORAGE.EXPORT_FORMAT,schemaVersion:FFF_STORAGE.SCHEMA_VERSION,
       exportedAt:new Date().toISOString(),data:{jamieProfile:saved.jamieProfile||JAMIE_DEFAULTS,
-        learnedFields:saved.learnedFields||[],settings:FFF_STORAGE.normalizeSettings(saved.settings)}},
+        learnedFields:saved.learnedFields||[],ignoredFields:saved.ignoredFields||[],settings:FFF_STORAGE.normalizeSettings(saved.settings)}},
       `firefox-form-filler-profile-v${FFF_STORAGE.SCHEMA_VERSION}-${new Date().toISOString().slice(0,10)}.private.json`);
     status.textContent='Private profile exported. Store it somewhere protected.';
   } catch {status.textContent='Could not export the private profile.';}
@@ -124,7 +148,7 @@ document.getElementById('import-file').addEventListener('change',async event=>{
     pendingImport=FFF_STORAGE.validateExport(JSON.parse(await file.text()));
     const populated=Object.values(pendingImport.jamieProfile.profile).filter(value=>typeof value==='string'&&value).length+
       Object.values(pendingImport.jamieProfile.optional).filter(Boolean).length;
-    document.getElementById('import-summary').textContent=`Validated schema ${FFF_STORAGE.SCHEMA_VERSION}: ${populated} populated profile fields and ${pendingImport.learnedFields.length} remembered fields. Applying will replace the current saved profile, remembered fields, and compatibility setting.`;
+    document.getElementById('import-summary').textContent=`Validated schema ${FFF_STORAGE.SCHEMA_VERSION}: ${populated} populated profile fields, ${pendingImport.learnedFields.length} remembered fields, and ${pendingImport.ignoredFields.length} ignored fields. Applying will replace the current saved profile, remembered fields, ignored fields, and settings.`;
     document.getElementById('import-preview').hidden=false;status.textContent='Import preview ready. Nothing has been changed.';
   } catch(error){status.textContent=`Import rejected: ${error.message}`;event.target.value='';}
 });

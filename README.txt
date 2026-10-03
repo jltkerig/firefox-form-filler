@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.4.4
+FIREFOX FORM FILLER - VERSION 1.5.0
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -84,7 +84,18 @@ PREVIEW BEFORE FILLING
 Click Review & Fill. The preview lists recognized questions and proposed
 answers, including learned answers. Uncheck anything to skip, then click Fill
 selected answers. Nothing is filled merely by opening the preview. Existing
-answers are preserved.
+answers that already match are preserved. If a resume or website supplied a
+different answer, the proposed correction appears unchecked with an explicit
+replacement warning; select it only when you want to overwrite that field.
+
+RESUME CORRECTIONS AND IGNORED FIELDS - NEW IN 1.5.0
+Resume-imported and website-prefilled text fields and standard dropdowns no
+longer disappear from Review & Fill when their existing answer differs from
+the saved profile. Corrections remain unchecked until you explicitly select
+them. Right-click an editable field and choose Firefox Form Filler: Ignore/use
+this field to toggle a hostname-specific ignore rule. Ignore rules store field
+identity only, never its entered value, and can also be removed under Ignored
+fields on the profile page.
 
 EDIT MY PROFILE
 Choose Edit my profile in the extension menu. New installations start with blank answers. Edit contact information, application

@@ -14,25 +14,30 @@ runInNewContext(read('defaults.js'), context);
 runInNewContext(read('storage-schema.js'), context);
 
 await context.FFF_STORAGE.migrateStorage();
-assert.equal(stored.profileSchemaVersion, 2);
+assert.equal(stored.profileSchemaVersion, 3);
 assert.equal(stored.settings.bitwardenCompatibilityMode, false);
 assert.equal(stored.settings.theme, 'system');
 assert.deepEqual(stored.learnedFields, []);
+assert.deepEqual(stored.ignoredFields, []);
 
 const candidate = {
   format: context.FFF_STORAGE.EXPORT_FORMAT,
-  schemaVersion: 2,
+  schemaVersion: 3,
   data: {
     jamieProfile: structuredClone(stored.jamieProfile),
     learnedFields: [{id:'fixture',question:'preferred location',answer:'Remote',updatedAt:1}],
+    ignoredFields: [{key:'ignored-fixture',question:'salary',host:'jobs.example',updatedAt:1}],
     settings: {bitwardenCompatibilityMode:true,theme:'dark'}
   }
 };
 const validated = context.FFF_STORAGE.validateExport(candidate);
 assert.equal(validated.learnedFields[0].answer, 'Remote');
+assert.equal(validated.ignoredFields[0].host, 'jobs.example');
 assert.equal(validated.settings.bitwardenCompatibilityMode, true);
 assert.equal(validated.settings.theme, 'dark');
 assert.equal(context.FFF_STORAGE.normalizeSettings({theme:'invalid'}).theme, 'system');
+const previousVersion=context.FFF_STORAGE.validateExport({...candidate,schemaVersion:2,data:{...candidate.data,ignoredFields:undefined}});
+assert.equal(previousVersion.ignoredFields.length, 0, 'older private exports must remain importable');
 assert.throws(() => context.FFF_STORAGE.validateExport({...candidate, schemaVersion:99}), /not supported/);
 assert.throws(() => context.FFF_STORAGE.validateExport({...candidate, data:{...candidate.data, learnedFields:'invalid'}}), /must be a list/);
 const futureField = context.FFF_STORAGE.normalizeProfile({...stored.jamieProfile, profile:{...stored.jamieProfile.profile, futureField:'keep me'}}, true);

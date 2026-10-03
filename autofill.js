@@ -988,6 +988,7 @@
 
 
   let LEARNED_FIELDS = [];
+  let IGNORED_FIELDS = [];
   const MEMORY_LIMITS = Object.freeze({records: 2000, answerLength: 20000});
   let SETTINGS = {bitwardenCompatibilityMode: false};
   let memoryUiInstalled = false;
@@ -1043,6 +1044,62 @@
       type: normalize(el.type || el.tagName),
       host: location.hostname
     };
+  }
+
+  function ignoredIdentity(el) {
+    const identity = memoryIdentity(el);
+    return {
+      question: identity.question, name: identity.name, elementId: identity.id,
+      placeholder: identity.placeholder, type: identity.type, host: identity.host
+    };
+  }
+
+  function ignoredMatchScore(saved, el) {
+    const current = ignoredIdentity(el);
+    if (!saved.host || saved.host !== current.host) return 0;
+    if (saved.question && current.question && saved.question !== current.question) return 0;
+    let score = 1;
+    if (saved.name && current.name && saved.name === current.name) score += 5;
+    if (saved.elementId && current.elementId && saved.elementId === current.elementId) score += 5;
+    if (saved.placeholder && current.placeholder && saved.placeholder === current.placeholder) score += 3;
+    if (saved.question && current.question && saved.question === current.question) score += 8;
+    if (saved.type && current.type && saved.type === current.type) score += 1;
+    return score;
+  }
+
+  function findIgnoredField(el) {
+    let best = null, bestScore = 0;
+    for (const saved of IGNORED_FIELDS) {
+      const score = ignoredMatchScore(saved, el);
+      if (score > bestScore) { best = saved; bestScore = score; }
+    }
+    return bestScore >= 6 ? best : null;
+  }
+
+  async function toggleIgnoredField(el) {
+    if (!el || !el.isConnected || !el.matches(reviewSelector) || ['hidden','password','file'].includes(el.type)) {
+      toast('This control cannot be added to the ignore list.'); return;
+    }
+    const existing = findIgnoredField(el);
+    if (existing) {
+      IGNORED_FIELDS = IGNORED_FIELDS.filter(item => item.key !== existing.key);
+      await browser.storage.local.set({ignoredFields: IGNORED_FIELDS});
+      updateMemoryControl(el);
+      toast('This field will be offered again.');
+      return;
+    }
+    if (IGNORED_FIELDS.length >= MEMORY_LIMITS.records) { toast('The ignored-field limit has been reached.'); return; }
+    const identity = ignoredIdentity(el);
+    if (![identity.question, identity.name, identity.elementId, identity.placeholder].some(Boolean)) {
+      toast('This field has no stable identity and cannot be ignored safely.'); return;
+    }
+    IGNORED_FIELDS.push({
+      key: `ignored-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+      ...identity, label: memoryDisplayLabel(el), updatedAt: Date.now()
+    });
+    await browser.storage.local.set({ignoredFields: IGNORED_FIELDS});
+    updateMemoryControl(el);
+    toast('This field will be ignored on this website.');
   }
 
   function memoryDisplayLabel(el) {
@@ -1219,7 +1276,7 @@
   }
 
   function updateMemoryControl(el) {
-    if (!el || !isVisible(el) || isMemoryUnsafe(el) || isCredentialControl(el) || el.closest('#jk-autofill-panel,#jk-review-host,#jk-field-memory-menu')) {
+    if (!el || !isVisible(el) || isMemoryUnsafe(el) || isCredentialControl(el) || findIgnoredField(el) || el.closest('#jk-autofill-panel,#jk-review-host,#jk-field-memory-menu')) {
       if (memoryButton) memoryButton.style.display = 'none';
       if (memoryMenu) memoryMenu.style.display = 'none';
       return;
@@ -1267,12 +1324,13 @@
   }
 
   async function loadSavedProfile() {
-    const saved = await browser.storage.local.get(['jamieProfile', 'learnedFields', 'settings']);
+    const saved = await browser.storage.local.get(['jamieProfile', 'learnedFields', 'ignoredFields', 'settings']);
     if (saved.jamieProfile) {
       Object.assign(PROFILE, saved.jamieProfile.profile);
       Object.assign(OPTIONAL, saved.jamieProfile.optional);
     }
     LEARNED_FIELDS = Array.isArray(saved.learnedFields) ? saved.learnedFields : [];
+    IGNORED_FIELDS = Array.isArray(saved.ignoredFields) ? saved.ignoredFields : [];
     SETTINGS = {bitwardenCompatibilityMode: saved.settings?.bitwardenCompatibilityMode === true};
   }
   const reviewSelector = 'input, textarea, select, [role="combobox"], button[aria-haspopup="listbox"], [role="checkbox"], [role="radio"], [contenteditable="true"][role="textbox"], [contenteditable="true"][aria-label]';
@@ -1281,6 +1339,12 @@
     (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup') === 'listbox');
   const isChoice = el => ['radio','checkbox'].includes(el.type) || ['radio','checkbox'].includes(el.getAttribute('role'));
   const isChecked = el => el.checked === true || el.getAttribute('aria-checked') === 'true';
+  browser.runtime.onMessage.addListener(message => {
+    if (message?.type !== 'toggle-ignore-field' || message.targetElementId == null) return;
+    const target = browser.menus.getTargetElement(message.targetElementId);
+    const field = target?.matches?.(reviewSelector) ? target : target?.closest?.(reviewSelector);
+    return toggleIgnoredField(field).catch(() => toast('Could not update the ignore rule.'));
+  });
   function directLabel(el) {
     const explicit = [...(el.labels || [])].map(label => label.textContent.trim()).filter(Boolean);
     const labelled = (el.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => rootElementById(el, id)?.textContent || '').join(' ').trim();
@@ -1301,6 +1365,15 @@
     if (!isCustom(el)) return hasValue(el);
     const text = normalize(el.value || el.textContent || '');
     return !!text && !/^(?:please )?(?:select|choose|pick|search)(?:\b.*)?$/.test(text);
+  }
+  function proposedAnswerIsCurrent(el, item) {
+    if (!currentAnswer(el)) return false;
+    if (isChoice(el)) return isChecked(el) && normalize(valueForMemory(el)) === normalize(item.value);
+    if (el instanceof HTMLSelectElement) {
+      const option = matchingOption([...el.options], item);
+      return !!option && option.selected;
+    }
+    return normalize(el.isContentEditable ? el.textContent : el.value) === normalize(item.value);
   }
   function peers(el) {
     if (el.type === 'radio' && el.name) return [...elementRoot(el).querySelectorAll('input[type="radio"]')]
@@ -1645,7 +1718,7 @@
     for (const el of discovered.fields) {
       if (!isVisible(el) || el.readOnly || el.getAttribute('aria-disabled') === 'true' ||
         el.closest('#jk-autofill-panel') || ['hidden','submit','button','reset','password','image'].includes(el.type) && !isCustom(el)) continue;
-      if (currentAnswer(el)) continue;
+      if (findIgnoredField(el)) continue;
       if (el.closest('[role="combobox"]') && el.closest('[role="combobox"]') !== el) continue;
       if (seen.has(el)) continue;
       seen.add(el);
@@ -1655,6 +1728,8 @@
       const choiceAnswered = el.type === 'radio' ? peers(el).some(isChecked) :
         checkboxGroup ? peers(el).some(isChecked) : isChoice(el) && isChecked(el);
       if (item.value && el.type !== 'file') {
+        if (proposedAnswerIsCurrent(el, item)) continue;
+        item.replaceExisting = currentAnswer(el);
         if (el instanceof HTMLSelectElement && !matchingOption([...el.options], item)) {
           attention.push({...item, reason: 'Saved answer is not an available option'});
         } else if (!candidateFits(el, item.value)) {
@@ -1720,7 +1795,8 @@
   }
   async function applyReviewed(item) {
     const el = item.el;
-    if (!globalThis.__jamieJobAutofill || !el.isConnected || !isVisible(el) || currentAnswer(el)) return false;
+    if (!globalThis.__jamieJobAutofill || !el.isConnected || !isVisible(el) || findIgnoredField(el) ||
+        (currentAnswer(el) && !item.replaceExisting)) return false;
     const fresh = answerFor(el);
     if (!fresh || fresh.value !== item.value || !candidateFits(el, item.value)) return false;
     if (isChoice(el)) { el.click(); await delay(175); return isChecked(el); }
@@ -1783,9 +1859,12 @@
     const copy = document.createElement('button'); copy.textContent = 'Copy saved answers'; copy.onclick = () => {host.remove();openPanel();}; box.appendChild(copy);
     const {proposals, attention} = collectReview();
     const selections = proposals.map(item => {
-      const row = document.createElement('label'), check = document.createElement('input'); check.type = 'checkbox'; check.checked = true;
+      const row = document.createElement('label'), check = document.createElement('input'); check.type = 'checkbox'; check.checked = !item.replaceExisting;
       row.append(check, document.createTextNode(item.label));
       const answer = document.createElement('small'); answer.textContent = item.value; row.appendChild(answer); box.appendChild(row);
+      if (item.replaceExisting) {
+        const warning = document.createElement('small'); warning.textContent = 'Already contains an answer — select to replace it.'; row.appendChild(warning);
+      }
       return {item,check};
     });
     const result = document.createElement('p'); result.setAttribute('role','status');
@@ -2210,7 +2289,7 @@
 
   loadSavedProfile().catch(() => {});
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && (changes.jamieProfile || changes.learnedFields || changes.settings)) {
+    if (area === 'local' && (changes.jamieProfile || changes.learnedFields || changes.ignoredFields || changes.settings)) {
       loadSavedProfile().then(() => activeMemoryField && updateMemoryControl(activeMemoryField)).catch(() => {});
     }
   });

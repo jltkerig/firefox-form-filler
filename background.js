@@ -8,6 +8,27 @@ browser.runtime.onMessage.addListener((message, sender, respond) => {
   return true;
 });
 
+browser.menus.create({
+  id: 'toggle-ignore-field',
+  title: 'Firefox Form Filler: Ignore/use this field',
+  contexts: ['editable'],
+  documentUrlPatterns: ['https://*/*']
+}, () => void browser.runtime.lastError);
+
+browser.menus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== 'toggle-ignore-field' || !tab?.id || info.targetElementId == null || !info.pageUrl) return;
+  try {
+    const url = new URL(info.pageUrl);
+    const pattern = `https://${url.hostname}/*`;
+    if (url.protocol !== 'https:' || !(await browser.permissions.contains({origins: [pattern]}))) return;
+    await browser.tabs.sendMessage(tab.id, {
+      type: 'toggle-ignore-field', targetElementId: info.targetElementId
+    }, {frameId: info.frameId || 0});
+  } catch (error) {
+    console.error('Could not toggle the field ignore rule:', error);
+  }
+});
+
 async function migrateProfile() {
   try { await FFF_STORAGE.migrateStorage(); }
   catch (error) { console.error('Profile migration was not applied:', error); }

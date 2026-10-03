@@ -22,11 +22,15 @@ async function injectAutofill(page) {
     Element.prototype.attachShadow = function(options) {
       return originalAttachShadow.call(this, {...options, mode:'open'});
     };
-    const listeners=[];
+    const listeners=[], messageListeners=[];
+    const stored={jamieProfile:profile,learnedFields:[],ignoredFields:[],settings:{bitwardenCompatibilityMode:false}};
+    globalThis.__storageWrites=[];
+    globalThis.__sendContentMessage=message=>Promise.all(messageListeners.map(listener=>listener(message)));
     globalThis.browser={
-      runtime:{sendMessage:async()=>true},
+      runtime:{sendMessage:async()=>true,onMessage:{addListener:listener=>messageListeners.push(listener)}},
+      menus:{getTargetElement:id=>document.querySelector(`[data-menu-target="${id}"]`)},
       storage:{
-        local:{get:async()=>({jamieProfile:profile,learnedFields:[],settings:{bitwardenCompatibilityMode:false}}),set:async()=>{}},
+        local:{get:async()=>structuredClone(stored),set:async values=>{Object.assign(stored,structuredClone(values));globalThis.__storageWrites.push(structuredClone(values));}},
         onChanged:{addListener:listener=>listeners.push(listener)}
       }
     };
@@ -49,7 +53,7 @@ test('popup fits without scrollbars and saves the selected theme', async ({page}
     const stored={settings:{bitwardenCompatibilityMode:true,theme:'light'}};
     globalThis.__themeWrites=[];
     globalThis.browser={
-      runtime:{getManifest:()=>({version:'1.4.4'}),openOptionsPage:async()=>{}},
+      runtime:{getManifest:()=>({version:'1.5.0'}),openOptionsPage:async()=>{}},
       storage:{local:{
         get:async keys=>{
           const names=Array.isArray(keys)?keys:[keys];
@@ -93,7 +97,10 @@ test('fills recognized fields, preserves existing values, and skips credentials'
   </form>`);
   await injectAutofill(page);
   const panel=await review(page);
-  await expect(panel.locator('input[type="checkbox"]')).toHaveCount(5);
+  await expect(panel.locator('input[type="checkbox"]')).toHaveCount(6);
+  const cityProposal=panel.locator('label').filter({hasText:'City'});
+  await expect(cityProposal.getByText('Already contains an answer')).toBeVisible();
+  await expect(cityProposal.locator('input[type="checkbox"]')).not.toBeChecked();
   await panel.locator('#apply').click();
   await expect(page.locator('[name="firstName"]')).toHaveValue('Test');
   await expect(page.locator('[name="lastName"]')).toHaveValue('Applicant');
@@ -102,6 +109,30 @@ test('fills recognized fields, preserves existing values, and skips credentials'
   await expect(page.locator('[name="startDate"]')).toHaveValue('2026-10-15');
   await expect(page.locator('[name="city"]')).toHaveValue('Keep this');
   await expect(page.locator('[name="password"]')).toHaveValue('');
+});
+
+test('can explicitly replace an incorrect resume answer', async ({page}) => {
+  await page.setContent('<label>City <input name="city" value="Incorrect Resume City"></label>');
+  await injectAutofill(page);
+  const panel=await review(page), proposal=panel.locator('label').filter({hasText:'City'});
+  await proposal.locator('input[type="checkbox"]').check();
+  await panel.locator('#apply').click();
+  await expect(page.locator('[name="city"]')).toHaveValue('Example City');
+});
+
+test('right-click rule toggles a field without storing its value', async ({page}) => {
+  await page.route('https://careers.example/**',route=>route.fulfill({contentType:'text/html',body:'<label>City <input name="city" value="Private City" data-menu-target="17"></label>'}));
+  await page.goto('https://careers.example/apply');
+  await injectAutofill(page);
+  await page.evaluate(()=>globalThis.__sendContentMessage({type:'toggle-ignore-field',targetElementId:17}));
+  const ignored=await page.evaluate(()=>globalThis.__storageWrites.at(-1).ignoredFields[0]);
+  expect(ignored.host).toBe('careers.example');
+  expect(ignored.name).toBe('city');
+  expect(JSON.stringify(ignored)).not.toContain('Private City');
+  const panel=await review(page);
+  await expect(panel.locator('input[type="checkbox"]')).toHaveCount(0);
+  await page.evaluate(()=>globalThis.__sendContentMessage({type:'toggle-ignore-field',targetElementId:17}));
+  expect(await page.evaluate(()=>globalThis.__storageWrites.at(-1).ignoredFields)).toEqual([]);
 });
 
 test('saved large-form fixture stays bounded and reports scan limits', async ({page}) => {

@@ -1,12 +1,13 @@
 (() => {
   'use strict';
 
-  const SCHEMA_VERSION = 2;
+  const SCHEMA_VERSION = 3;
   const EXPORT_FORMAT = 'firefox-form-filler-private-profile';
   const MAX_LEARNED_FIELDS = 2000;
   const MAX_TEXT_LENGTH = 20000;
   const SETTINGS_DEFAULTS = Object.freeze({bitwardenCompatibilityMode: false, theme: 'system'});
   const learnedKeys = ['id', 'question', 'name', 'placeholder', 'type', 'host', 'label', 'answer'];
+  const ignoredKeys = ['key', 'question', 'name', 'elementId', 'placeholder', 'type', 'host', 'label'];
 
   function text(value, path) {
     if (typeof value !== 'string') throw new Error(`${path} must be text.`);
@@ -59,6 +60,19 @@
     });
   }
 
+  function normalizeIgnoredFields(source) {
+    if (!Array.isArray(source)) throw new Error('ignoredFields must be a list.');
+    if (source.length > MAX_LEARNED_FIELDS) throw new Error(`ignoredFields cannot exceed ${MAX_LEARNED_FIELDS} entries.`);
+    return source.map((item, index) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`ignoredFields[${index}] must be an object.`);
+      const record = Object.fromEntries(ignoredKeys.map(key => [key, text(item[key] ?? '', `ignoredFields[${index}].${key}`)]));
+      const updatedAt = Number(item.updatedAt || 0);
+      if (!Number.isFinite(updatedAt) || updatedAt < 0) throw new Error(`ignoredFields[${index}].updatedAt is invalid.`);
+      record.updatedAt = updatedAt;
+      return record;
+    });
+  }
+
   function normalizeSettings(source = {}) {
     if (!source || typeof source !== 'object' || Array.isArray(source)) throw new Error('settings must be an object.');
     return {
@@ -70,16 +84,20 @@
   function validateExport(source) {
     if (!source || typeof source !== 'object' || Array.isArray(source)) throw new Error('The selected file is not a profile backup.');
     if (source.format !== EXPORT_FORMAT) throw new Error('The selected file has an unsupported format.');
-    if (source.schemaVersion !== SCHEMA_VERSION) throw new Error(`Schema version ${source.schemaVersion ?? 'missing'} is not supported.`);
+    const version = Number(source.schemaVersion);
+    if (!Number.isInteger(version) || version < 1 || version > SCHEMA_VERSION) {
+      throw new Error(`Schema version ${source.schemaVersion ?? 'missing'} is not supported.`);
+    }
     return {
       jamieProfile: normalizeProfile(source.data?.jamieProfile || JAMIE_DEFAULTS),
       learnedFields: normalizeLearnedFields(source.data?.learnedFields || []),
+      ignoredFields: normalizeIgnoredFields(source.data?.ignoredFields || []),
       settings: normalizeSettings(source.data?.settings || {})
     };
   }
 
   async function migrateStorage() {
-    const saved = await browser.storage.local.get(['profileSchemaVersion', 'jamieProfile', 'learnedFields', 'settings']);
+    const saved = await browser.storage.local.get(['profileSchemaVersion', 'jamieProfile', 'learnedFields', 'ignoredFields', 'settings']);
     const version = Number(saved.profileSchemaVersion || 0);
     if (version > SCHEMA_VERSION) throw new Error('This profile was created by a newer extension version.');
     if (version === SCHEMA_VERSION) return saved;
@@ -87,6 +105,7 @@
       profileSchemaVersion: SCHEMA_VERSION,
       jamieProfile: normalizeProfile(saved.jamieProfile || JAMIE_DEFAULTS, true),
       learnedFields: normalizeLearnedFields(saved.learnedFields || []),
+      ignoredFields: normalizeIgnoredFields(saved.ignoredFields || []),
       settings: normalizeSettings(saved.settings || {})
     };
     await browser.storage.local.set(migrated);
@@ -95,6 +114,6 @@
 
   globalThis.FFF_STORAGE = Object.freeze({
     SCHEMA_VERSION, EXPORT_FORMAT, SETTINGS_DEFAULTS, normalizeProfile,
-    normalizeLearnedFields, normalizeSettings, validateExport, migrateStorage
+    normalizeLearnedFields, normalizeIgnoredFields, normalizeSettings, validateExport, migrateStorage
   });
 })();

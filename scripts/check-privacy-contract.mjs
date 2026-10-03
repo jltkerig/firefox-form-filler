@@ -19,7 +19,7 @@ function assertBlank(value, path = 'defaults') {
 }
 
 assertBlank(defaultsContext.JAMIE_DEFAULTS);
-assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'scripting', 'storage']);
+assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'menus', 'scripting', 'storage']);
 assert.deepEqual(manifest.optional_permissions, ['downloads']);
 assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
 assert.match(read('README.txt'), new RegExp(`^FIREFOX FORM FILLER - VERSION ${manifest.version.replaceAll('.', '\\.')}`, 'm'),
@@ -45,8 +45,12 @@ for (const name of ['autofill.js', 'background.js', 'options.js', 'popup.js', 's
 }
 
 const autofill = read('autofill.js');
-assert.match(autofill, /if \(currentAnswer\(el\)\) continue;/,
-  'review must skip existing answers');
+assert.match(autofill, /check\.checked = !item\.replaceExisting/,
+  'existing answers must require explicit replacement selection');
+assert.match(autofill, /if \(findIgnoredField\(el\)\) continue;/,
+  'ignored fields must not be proposed');
+assert.match(autofill, /browser\.menus\.getTargetElement\(message\.targetElementId\)/,
+  'right-click ignore must resolve only Firefox-provided target elements');
 assert.match(autofill, /\['hidden','submit','button','reset','password','image'\]\.includes\(el\.type\)/,
   'review must skip hidden and password fields');
 assert.match(autofill, /!isVisible\(el\)/,
@@ -80,6 +84,8 @@ assert.match(read('options.js'), /Import preview ready\. Nothing has been change
   'imports must have a non-mutating preview step');
 assert.match(read('background.js'), /permissions\.onRemoved/,
   'revoked site permissions must be reconciled');
+assert.match(read('background.js'), /contexts: \['editable'\]/,
+  'the ignore context menu must be limited to editable controls');
 for (const legacy of ['fillTextFields', 'fillYesNo', 'fillCurrentEmployeeCheckboxes',
   'fillMinimumRequirementsOptions', 'fillVeteranStatus']) {
   assert.doesNotMatch(autofill, new RegExp(`function ${legacy}\\(`),
