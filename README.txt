@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.4.3
+FIREFOX FORM FILLER - VERSION 1.4.4
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -130,6 +130,10 @@ THEME AND POPUP SIZE - NEW IN 1.4.3
 Choose System, Light, or Dark in either the extension popup or profile page.
 The preference is stored locally and shared by both screens. The popup is sized
 to show its normal closed sections without horizontal or vertical scrollbars.
+
+POPUP CLARITY - NEW IN 1.4.4
+Theme is inside a collapsed Settings section. The current website's whitelist
+status appears directly beneath the controls it describes.
 
 CUSTOM DROPDOWNS
 Supports standard dropdowns and common accessible combobox/listbox menus. For

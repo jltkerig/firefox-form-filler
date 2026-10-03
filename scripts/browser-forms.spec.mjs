@@ -44,12 +44,12 @@ async function review(page) {
 }
 
 test('popup fits without scrollbars and saves the selected theme', async ({page}) => {
-  await page.setViewportSize({width:420,height:600});
+  await page.setViewportSize({width:420,height:650});
   await page.addInitScript(() => {
     const stored={settings:{bitwardenCompatibilityMode:true,theme:'light'}};
     globalThis.__themeWrites=[];
     globalThis.browser={
-      runtime:{getManifest:()=>({version:'1.4.3'}),openOptionsPage:async()=>{}},
+      runtime:{getManifest:()=>({version:'1.4.4'}),openOptionsPage:async()=>{}},
       storage:{local:{
         get:async keys=>{
           const names=Array.isArray(keys)?keys:[keys];
@@ -63,6 +63,11 @@ test('popup fits without scrollbars and saves the selected theme', async ({page}
     };
   });
   await page.goto(popupUrl);
+  await expect(page.locator('#status')).toHaveText('Autofill is not enabled for this website.');
+  expect(await page.locator('#status').evaluate(status=>status.previousElementSibling?.id)).toBe('disable');
+  await expect(page.locator('#settings')).not.toHaveAttribute('open','');
+  await expect(page.locator('#settings summary')).toHaveText('Settings');
+  await page.locator('#settings summary').click();
   await expect(page.locator('#theme')).toHaveValue('light');
   const size=await page.evaluate(()=>({
     scrollWidth:document.body.scrollWidth,scrollHeight:document.body.scrollHeight,

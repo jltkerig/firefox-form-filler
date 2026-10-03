@@ -40,7 +40,7 @@ async function initialize() {
   document.getElementById('site').textContent = url.hostname;
   saveExample.disabled = false;
   await updateButtons();
-  status.textContent = disable.disabled ? 'Not on the whitelist.' : 'This website has a whitelist entry or site access.';
+  status.textContent = disable.disabled ? 'Autofill is not enabled for this website.' : 'Autofill is enabled for this website.';
 }
 enable.addEventListener('click', async () => {
   enable.disabled = disable.disabled = true;
