@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "test:browser": "playwright test scripts/browser-forms.spec.mjs --reporter=line",
-    "test:auth": "node scripts/check-auth.mjs",
     "fixture:convert": "node scripts/convert-page-report.mjs"
   },
   "devDependencies": {

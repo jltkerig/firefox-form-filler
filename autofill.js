@@ -1,7 +1,6 @@
-(async () => {
+(() => {
   'use strict';
   if (globalThis.__jamieJobAutofill) return;
-  if (!(await browser.runtime.sendMessage({type:'can-fill'}))) return;
   let launcherObserver = null;
   let launcherRepairTimer = null;
   let destroyed = false;
@@ -1369,10 +1368,6 @@
     return target?.matches?.(reviewSelector) ? target : target?.closest?.(reviewSelector);
   }
   browser.runtime.onMessage.addListener(message => {
-    if (message?.type === 'destroy-extension-ui') {
-      globalThis.__jamieJobAutofill?.destroy();
-      return;
-    }
     if (!['field-menu-state','set-ignore-field','save-field'].includes(message?.type) || message.targetElementId == null) return;
     const field = contextMenuField(message.targetElementId);
     if (message.type === 'field-menu-state') return Promise.resolve({
@@ -1939,7 +1934,7 @@
     const apply = document.createElement('button'); apply.id = 'apply'; apply.textContent = 'Fill selected answers'; apply.disabled = !proposals.length; box.appendChild(apply);
     apply.onclick = async () => {
       apply.disabled = true;
-      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {result.textContent = 'Unlock the extension and confirm website access first.'; return;}
+      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {result.textContent = 'Website access was removed.'; return;}
       let filled = 0; const failures = [], skipped = [];
       for (const {item,check} of selections) {
         check.disabled = true;
@@ -1958,7 +1953,7 @@
   }
   async function fillApplication() {
     try {
-      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {toast('Unlock the extension and whitelist this website first.');return;}
+      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {toast('Whitelist this website first.');return;}
       await loadSavedProfile();
       showReview();
     } catch { toast('Could not load your profile. Reopen the extension and try again.'); }

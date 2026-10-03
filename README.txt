@@ -49,18 +49,6 @@ TEMPORARY DEVELOPMENT INSTALL
 This unsigned development add-on lasts until Firefox restarts. Permanent
 installation in standard Firefox requires Mozilla signing.
 
-LOCAL PASSWORD LOCK
-The first toolbar click asks you to create a local password of at least 10
-characters. Later Firefox sessions open on the unlock page. Unlocking lasts
-only for the current Firefox session; choose Lock now in the toolbar menu to
-lock immediately and remove the form-filler controls from open pages.
-
-Only a salted PBKDF2-SHA-256 password verifier is saved. The password itself is
-not stored. This lock deters casual access to the extension UI and prevents the
-content script from loading saved answers while locked. It does not encrypt
-Firefox extension storage or protect against someone who can access the local
-Firefox profile. Keep private profile exports in protected local storage.
-
 WHITELIST
 Click the JK toolbar icon and choose Whitelist this website. The floating
 Review & Fill button appears on that exact HTTPS hostname. Remove this

@@ -1,36 +1,12 @@
 browser.runtime.onMessage.addListener((message, sender, respond) => {
-  const extensionPage = sender.id === browser.runtime.id && sender.url?.startsWith(browser.runtime.getURL(''));
-  if (message?.type === 'lock-extension' && extensionPage) {
-    (async () => {
-      await FFF_AUTH.lock();
-      const tabs = await browser.tabs.query({});
-      await Promise.allSettled(tabs.filter(tab => tab.id).map(tab => browser.tabs.sendMessage(tab.id, {type:'destroy-extension-ui'})));
-      respond(true);
-    })().catch(() => respond(false));
-    return true;
-  }
-  if (message?.type === 'unlock-extension' && extensionPage) {
-    activateAuthorizedTabs().then(() => respond(true), () => respond(false));
-    return true;
-  }
   if (message?.type !== 'can-fill' || !sender.tab || !sender.url) return;
   let url;
   try { url = new URL(sender.url); } catch { respond(false); return; }
   if (url.protocol !== 'https:') { respond(false); return; }
-  Promise.all([FFF_AUTH.state(), browser.permissions.contains({origins: [`https://${url.hostname}/*`]})])
-    .then(([auth, permitted]) => respond(auth.unlocked && permitted), () => respond(false));
+  browser.permissions.contains({origins: [`https://${url.hostname}/*`]})
+    .then(respond, () => respond(false));
   return true;
 });
-
-async function activateAuthorizedTabs() {
-  const entries = (await browser.scripting.getRegisteredContentScripts()).filter(entry => entry.id.startsWith('jamie-'));
-  const matches = [...new Set(entries.flatMap(entry => entry.matches || []))];
-  if (!matches.length) return;
-  const tabs = await browser.tabs.query({url: matches});
-  await Promise.allSettled(tabs.filter(tab => tab.id).map(tab => browser.scripting.executeScript({
-    target: {tabId: tab.id}, files: ['defaults.js', 'autofill.js']
-  })));
-}
 
 browser.menus.create({
   id: 'ignore-field',
@@ -49,8 +25,7 @@ browser.menus.create({
 async function trustedFieldContext(info, tab) {
   if (!tab?.id || info.targetElementId == null || !info.pageUrl) return null;
   const url = new URL(info.pageUrl);
-  if (url.protocol !== 'https:' || !(await FFF_AUTH.state()).unlocked ||
-      !(await browser.permissions.contains({origins: [`https://${url.hostname}/*`]}))) return null;
+  if (url.protocol !== 'https:' || !(await browser.permissions.contains({origins: [`https://${url.hostname}/*`]}))) return null;
   return {tabId: tab.id, options: {frameId: info.frameId || 0}, targetElementId: info.targetElementId};
 }
 
