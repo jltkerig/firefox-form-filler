@@ -19,6 +19,7 @@ backups/
 *.bak
 *.zip
 *.xpi
+!docs/firefox-form-filler-dev-v*.xpi
 dist/
 .build/
 web-ext-artifacts/

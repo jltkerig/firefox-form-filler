@@ -30,6 +30,14 @@ The source code and documentation are already on GitHub. Signing requires
 Mozilla's service and can be delayed by review. The workflow does not publish
 an XPI until the repository variable and signing credentials are configured.
 
+UNSIGNED DEVELOPER EDITION UPDATES
+Firefox Developer Edition can test unsigned persistent upgrades when
+xpinstall.signatures.required is false. Install the development XPI from the
+project's GitHub Pages web link, not through about:debugging or Install Add-on
+From File. The fixed extension ID and HTTPS update_url then let Firefox's Check
+for Updates command read updates.json and install a higher-version development
+XPI. This development channel is not supported by standard Firefox.
+
 TEMPORARY DEVELOPMENT INSTALL
 1. Open about:debugging#/runtime/this-firefox in Firefox 128 or newer.
 2. For an already loaded add-on, use Reload to preserve its local profile.

@@ -1,7 +1,13 @@
 {
   "addons": {
     "jamie-job-autofill@local.invalid": {
-      "updates": []
+      "updates": [
+        {
+          "version": "1.4.2",
+          "update_link": "https://jltkerig.github.io/firefox-form-filler/firefox-form-filler-dev-v1.4.2.xpi",
+          "update_hash": "sha256:fa8af919364bac8f3b94996f4eed4041c7c0c9167dc45902e5c7aefd3e5c0e81"
+        }
+      ]
     }
   }
 }
