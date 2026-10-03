@@ -19,10 +19,6 @@ const files = [
   'popup.css',
   'popup.js',
   'jk-toolbar-v112.svg',
-  'icons/icon-16.png',
-  'icons/icon-32.png',
-  'icons/icon-48.png',
-  'icons/icon-96.png',
 ];
 
 if (manifest.browser_specific_settings?.gecko?.id !== 'jamie-job-autofill@local.invalid') {

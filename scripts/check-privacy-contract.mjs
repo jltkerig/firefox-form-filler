@@ -64,5 +64,12 @@ assert.match(read('options.js'), /Import preview ready\. Nothing has been change
   'imports must have a non-mutating preview step');
 assert.match(read('background.js'), /permissions\.onRemoved/,
   'revoked site permissions must be reconciled');
+for (const legacy of ['fillTextFields', 'fillYesNo', 'fillCurrentEmployeeCheckboxes',
+  'fillMinimumRequirementsOptions', 'fillVeteranStatus']) {
+  assert.doesNotMatch(autofill, new RegExp(`function ${legacy}\\(`),
+    `${legacy} was an unreachable legacy path and must not be restored`);
+}
+assert.doesNotMatch(read('scripts/package-extension.mjs'), /icons\/icon-\d+\.png/,
+  'the package must not duplicate the manifest SVG with unused PNG icons');
 
 console.log('Privacy contract checks passed (static source checks; live Firefox behavior still needs testing).');
