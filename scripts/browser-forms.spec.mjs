@@ -53,7 +53,7 @@ test('popup fits without scrollbars and saves the selected theme', async ({page}
     const stored={settings:{bitwardenCompatibilityMode:true,theme:'light'}};
     globalThis.__themeWrites=[];
     globalThis.browser={
-      runtime:{getManifest:()=>({version:'1.5.0'}),openOptionsPage:async()=>{}},
+      runtime:{getManifest:()=>({version:'1.5.1'}),openOptionsPage:async()=>{}},
       storage:{local:{
         get:async keys=>{
           const names=Array.isArray(keys)?keys:[keys];
@@ -120,19 +120,25 @@ test('can explicitly replace an incorrect resume answer', async ({page}) => {
   await expect(page.locator('[name="city"]')).toHaveValue('Example City');
 });
 
-test('right-click rule toggles a field without storing its value', async ({page}) => {
+test('right-click menu can ignore, restore, and save a field', async ({page}) => {
   await page.route('https://careers.example/**',route=>route.fulfill({contentType:'text/html',body:'<label>City <input name="city" value="Private City" data-menu-target="17"></label>'}));
   await page.goto('https://careers.example/apply');
   await injectAutofill(page);
-  await page.evaluate(()=>globalThis.__sendContentMessage({type:'toggle-ignore-field',targetElementId:17}));
+  expect((await page.evaluate(()=>globalThis.__sendContentMessage({type:'field-menu-state',targetElementId:17})))[0]).toMatchObject({supported:true,ignored:false,savable:true});
+  await page.evaluate(()=>globalThis.__sendContentMessage({type:'set-ignore-field',targetElementId:17,ignored:true}));
   const ignored=await page.evaluate(()=>globalThis.__storageWrites.at(-1).ignoredFields[0]);
   expect(ignored.host).toBe('careers.example');
   expect(ignored.name).toBe('city');
   expect(JSON.stringify(ignored)).not.toContain('Private City');
   const panel=await review(page);
   await expect(panel.locator('input[type="checkbox"]')).toHaveCount(0);
-  await page.evaluate(()=>globalThis.__sendContentMessage({type:'toggle-ignore-field',targetElementId:17}));
+  expect((await page.evaluate(()=>globalThis.__sendContentMessage({type:'field-menu-state',targetElementId:17})))[0].ignored).toBe(true);
+  await page.evaluate(()=>globalThis.__sendContentMessage({type:'set-ignore-field',targetElementId:17,ignored:false}));
   expect(await page.evaluate(()=>globalThis.__storageWrites.at(-1).ignoredFields)).toEqual([]);
+  await page.evaluate(()=>globalThis.__sendContentMessage({type:'save-field',targetElementId:17}));
+  const learned=await page.evaluate(()=>globalThis.__storageWrites.at(-1).learnedFields[0]);
+  expect(learned.answer).toBe('Private City');
+  expect(learned.host).toBe('careers.example');
 });
 
 test('saved large-form fixture stays bounded and reports scan limits', async ({page}) => {

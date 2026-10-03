@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.5.0
+FIREFOX FORM FILLER - VERSION 1.5.1
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -92,10 +92,11 @@ RESUME CORRECTIONS AND IGNORED FIELDS - NEW IN 1.5.0
 Resume-imported and website-prefilled text fields and standard dropdowns no
 longer disappear from Review & Fill when their existing answer differs from
 the saved profile. Corrections remain unchecked until you explicitly select
-them. Right-click an editable field and choose Firefox Form Filler: Ignore/use
-this field to toggle a hostname-specific ignore rule. Ignore rules store field
-identity only, never its entered value, and can also be removed under Ignored
-fields on the profile page.
+them. Right-click an editable field and check Ignore this field to create a
+hostname-specific ignore rule; right-click and uncheck it to restore the field.
+The same menu offers Save this field for remembering its current answer. Ignore
+rules store field identity only, never its entered value, and can also be
+removed under Ignored fields on the profile page.
 
 EDIT MY PROFILE
 Choose Edit my profile in the extension menu. New installations start with blank answers. Edit contact information, application

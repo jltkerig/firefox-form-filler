@@ -49,7 +49,7 @@ assert.match(autofill, /check\.checked = !item\.replaceExisting/,
   'existing answers must require explicit replacement selection');
 assert.match(autofill, /if \(findIgnoredField\(el\)\) continue;/,
   'ignored fields must not be proposed');
-assert.match(autofill, /browser\.menus\.getTargetElement\(message\.targetElementId\)/,
+assert.match(autofill, /browser\.menus\.getTargetElement\(targetElementId\)/,
   'right-click ignore must resolve only Firefox-provided target elements');
 assert.match(autofill, /\['hidden','submit','button','reset','password','image'\]\.includes\(el\.type\)/,
   'review must skip hidden and password fields');
@@ -86,6 +86,10 @@ assert.match(read('background.js'), /permissions\.onRemoved/,
   'revoked site permissions must be reconciled');
 assert.match(read('background.js'), /contexts: \['editable'\]/,
   'the ignore context menu must be limited to editable controls');
+assert.match(read('background.js'), /type: 'checkbox'/,
+  'the native ignore item must visibly toggle on and off');
+assert.match(read('background.js'), /id: 'save-field'/,
+  'the native field menu must offer saving the selected field');
 for (const legacy of ['fillTextFields', 'fillYesNo', 'fillCurrentEmployeeCheckboxes',
   'fillMinimumRequirementsOptions', 'fillVeteranStatus']) {
   assert.doesNotMatch(autofill, new RegExp(`function ${legacy}\\(`),

@@ -1076,18 +1076,20 @@
     return bestScore >= 6 ? best : null;
   }
 
-  async function toggleIgnoredField(el) {
+  async function setIgnoredField(el, ignored) {
     if (!el || !el.isConnected || !el.matches(reviewSelector) || ['hidden','password','file'].includes(el.type)) {
       toast('This control cannot be added to the ignore list.'); return;
     }
     const existing = findIgnoredField(el);
-    if (existing) {
+    if (!ignored && existing) {
       IGNORED_FIELDS = IGNORED_FIELDS.filter(item => item.key !== existing.key);
       await browser.storage.local.set({ignoredFields: IGNORED_FIELDS});
       updateMemoryControl(el);
       toast('This field will be offered again.');
       return;
     }
+    if (!ignored) { toast('This field is already available.'); return; }
+    if (existing) { toast('This field is already ignored.'); return; }
     if (IGNORED_FIELDS.length >= MEMORY_LIMITS.records) { toast('The ignored-field limit has been reached.'); return; }
     const identity = ignoredIdentity(el);
     if (![identity.question, identity.name, identity.elementId, identity.placeholder].some(Boolean)) {
@@ -1178,8 +1180,8 @@
     await browser.storage.local.set({ learnedFields: LEARNED_FIELDS });
   }
 
-  async function rememberCurrentField(mode) {
-    const el = activeMemoryField;
+  async function rememberCurrentField(mode, field = activeMemoryField) {
+    const el = field;
     if (!el || !el.isConnected) { toast('Click a form field first.'); return; }
     if (isMemoryUnsafe(el)) { toast('This type of sensitive field is not saved.'); return; }
     const existing = findLearnedField(el);
@@ -1339,11 +1341,22 @@
     (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-haspopup') === 'listbox');
   const isChoice = el => ['radio','checkbox'].includes(el.type) || ['radio','checkbox'].includes(el.getAttribute('role'));
   const isChecked = el => el.checked === true || el.getAttribute('aria-checked') === 'true';
+  function contextMenuField(targetElementId) {
+    const target = browser.menus.getTargetElement(targetElementId);
+    return target?.matches?.(reviewSelector) ? target : target?.closest?.(reviewSelector);
+  }
   browser.runtime.onMessage.addListener(message => {
-    if (message?.type !== 'toggle-ignore-field' || message.targetElementId == null) return;
-    const target = browser.menus.getTargetElement(message.targetElementId);
-    const field = target?.matches?.(reviewSelector) ? target : target?.closest?.(reviewSelector);
-    return toggleIgnoredField(field).catch(() => toast('Could not update the ignore rule.'));
+    if (!['field-menu-state','set-ignore-field','save-field'].includes(message?.type) || message.targetElementId == null) return;
+    const field = contextMenuField(message.targetElementId);
+    if (message.type === 'field-menu-state') return Promise.resolve({
+      supported: !!field && !['hidden','password','file'].includes(field.type),
+      ignored: !!field && !!findIgnoredField(field),
+      savable: !!field && !isMemoryUnsafe(field)
+    });
+    if (message.type === 'set-ignore-field') {
+      return setIgnoredField(field, message.ignored === true).catch(() => toast('Could not update the ignore rule.'));
+    }
+    return rememberCurrentField('remember', field).catch(() => toast('Could not save this field.'));
   });
   function directLabel(el) {
     const explicit = [...(el.labels || [])].map(label => label.textContent.trim()).filter(Boolean);
