@@ -11,7 +11,7 @@ These rules replace all earlier versions of these protection rules. Preserve exi
 
 2. This repository is intentionally public so future employers can review the project. Do not change its visibility.
 
-3. Within C:\Users\Jamie\Desktop\Work-Jamie\python, local access is limited to:
+3. Within this repository's parent folder (the folder that contains `firefox-form-filler`), local access is limited to:
    - firefox-form-filler
    - firefox-form-filler-private-backup
    - Additional folders created specifically for this project under these rules.
@@ -29,7 +29,7 @@ These rules replace all earlier versions of these protection rules. Preserve exi
 7. Before modifying existing files, back up their current state:
    - Commit and push publishable source code and documentation to the designated public repository.
    - Back up sensitive or excluded project files only to the designated independent local backup folder:
-     C:\Users\Jamie\Desktop\Work-Jamie\python\firefox-form-filler-private-backup
+     `..\firefox-form-filler-private-backup` (next to this repository's folder)
    - If a file mixes source code with private information, preserve its original state only in the local backup. Never publish it merely to satisfy the backup requirement.
    - Include relevant uncommitted work and untracked files in the appropriate backup.
    - Verify that each required backup succeeded before editing.
