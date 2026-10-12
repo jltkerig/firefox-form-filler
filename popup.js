@@ -2,6 +2,7 @@ const enable = document.getElementById('enable');
 const disable = document.getElementById('disable');
 const saveExample = document.getElementById('save-example');
 const fillNow = document.getElementById('fill-now');
+const saveToProfile = document.getElementById('save-to-profile');
 const status = document.getElementById('status');
 document.getElementById('version').textContent = `Version ${browser.runtime.getManifest().version}`;
 let tab, pattern, id;
@@ -28,7 +29,18 @@ async function updateButtons() {
   disable.disabled = !pattern || (!entries.some(e => e.matches.includes(pattern)) &&
     !(await browser.permissions.contains({origins: [pattern]})));
   fillNow.disabled = disable.disabled;  // the page can only be filled once the website is whitelisted
+  saveToProfile.disabled = disable.disabled;
 }
+saveToProfile.addEventListener('click', async () => {
+  saveToProfile.disabled = true;
+  try {
+    await browser.tabs.sendMessage(tab.id, {type: 'save-to-profile'});
+    window.close();  // the list of answers to save shows on the page
+  } catch {
+    status.textContent = 'Could not reach the page. Reload it and try again.';
+    saveToProfile.disabled = false;
+  }
+});
 fillNow.addEventListener('click', async () => {
   fillNow.disabled = true;
   try {

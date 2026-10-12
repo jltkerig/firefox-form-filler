@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.0
+FIREFOX FORM FILLER - VERSION 1.6.2
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,13 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+SAVE PAGE ANSWERS TO YOUR PROFILE - NEW IN 1.6.2
+Fill in a form yourself, then choose Save this page's answers to my profile in the extension menu (or the purple
+Save answers to profile button on the page). Each filled field is matched to a profile answer by the same label
+rules the fill uses. Only answers that differ from your profile are listed, with the old and new value; untick any
+you do not want and click Save selected to profile. Passwords, files, choices and sensitive fields are never read.
+Fields labelled just Name and Website URL are now matched when filling.
 
 ONE-CLICK AUTOFILL AND FIXES - NEW IN 1.6.1
 The extension menu has Autofill this page, and whitelisted pages show an Autofill page button above Review & Fill.

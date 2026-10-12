@@ -9,7 +9,7 @@
       destroyed = true;
       launcherObserver?.disconnect();
       clearTimeout(launcherRepairTimer);
-      ['jk-autofill-launcher', 'jk-autofill-now', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
+      ['jk-autofill-launcher', 'jk-autofill-now', 'jk-save-profile', 'jk-save-profile-host', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
         .forEach(id => document.getElementById(id)?.remove());
       delete globalThis.__jamieJobAutofill;
     }
@@ -459,7 +459,8 @@
         /\bfull name\b/,
         /\blegal name\b/,
         /\bcandidate name\b/,
-        /\bapplicant name\b/
+        /\bapplicant name\b/,
+        /^(?:your )?name$/
       ],
       [
         /company/,
@@ -573,7 +574,8 @@
       [
         /\bportfolio\b/,
         /\bpersonal website\b/,
-        /\bprofessional website\b/
+        /\bprofessional website\b/,
+        /^(?:your |my )?(?:web ?site|website)(?: url| link| address)?$/
       ]
     ],
 
@@ -1982,7 +1984,123 @@
   }
   browser.runtime.onMessage.addListener(message => {
     if (message?.type === 'fill-now') { fillNow(); return Promise.resolve({started: true}); }
+    if (message?.type === 'save-to-profile') { showSaveToProfile(); return Promise.resolve({started: true}); }
   });
+
+  // Save what is typed on this page into the profile. Each filled field is matched to a profile answer with the same
+  // label rules the fill uses; changed answers are shown first and nothing is saved until you confirm.
+  function profileTarget(el) {
+    const direct = directLabel(el);
+    if (!direct || isRecordDetailsPage() || isConsentQuestion(el) || isSensitive(direct) || isChoice(el)) return null;
+    const rule = RULES.find(([, patterns, excludes = [], textareaOnly = false]) =>
+      (!textareaOnly || el instanceof HTMLTextAreaElement) && !excludes.some(rx => rx.test(direct)) && patterns.some(rx => rx.test(direct)));
+    if (!rule) return null;
+    if (rule[0] === phoneValue) return {section: 'profile', key: 'phone'};
+    const source = /^\(\)\s*=>\s*(PROFILE|OPTIONAL)\.([A-Za-z0-9]+)\s*$/.exec(Function.prototype.toString.call(rule[0]).trim());
+    return source ? {section: source[1] === 'PROFILE' ? 'profile' : 'optional', key: source[2]} : null;
+  }
+  function profileSaveCandidates() {
+    const found = new Map();
+    for (const el of discoverReviewElements().fields) {
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)) continue;
+      if (!isVisible(el) || el.readOnly || el.disabled || el.closest('#jk-autofill-panel') || findIgnoredField(el)) continue;
+      if (['hidden', 'submit', 'button', 'reset', 'password', 'image', 'file', 'checkbox', 'radio'].includes(el.type)) continue;
+      if (isMemoryUnsafe(el)) continue;
+      const target = profileTarget(el);
+      const store = target && (target.section === 'profile' ? PROFILE : OPTIONAL);
+      if (!target || typeof store[target.key] !== 'string') continue;
+      const chosen = el instanceof HTMLSelectElement ? el.selectedOptions[0] : null;
+      const value = String(el instanceof HTMLSelectElement ? (chosen?.value ? chosen.textContent : '') : el.value).trim();
+      if (!value || value.length > 500) continue;
+      const id = `${target.section}.${target.key}`;
+      const current = String(store[target.key] || '').trim();
+      if (found.has(id) || normalize(current) === normalize(value)) continue;
+      // Some pages repeat the label text twice ("Name * Name *"); show it once.
+      const words = (getLabelText(el) || el.name || target.key).trim().split(/\s+/);
+      const half = words.length / 2;
+      const once = Number.isInteger(half) && half > 0 && words.slice(0, half).join(' ') === words.slice(half).join(' ') ? words.slice(0, half) : words;
+      found.set(id, {...target, value, current, label: once.join(' ').slice(0, 120)});
+    }
+    return [...found.values()];
+  }
+  async function saveToProfile(changes) {
+    const saved = await browser.storage.local.get(['jamieProfile', 'profileVariants', 'activeProfileVariant']);
+    const apply = data => {
+      const next = {...data, profile: {...(data?.profile || {})}, optional: {...(data?.optional || {})}};
+      for (const change of changes) next[change.section][change.key] = change.value;
+      return next;
+    };
+    const update = {jamieProfile: apply(saved.jamieProfile)};
+    if (Array.isArray(saved.profileVariants)) {
+      update.profileVariants = saved.profileVariants.map(item => item?.id === saved.activeProfileVariant ? {...item, data: apply(item.data)} : item);
+    }
+    await browser.storage.local.set(update);
+    for (const change of changes) (change.section === 'profile' ? PROFILE : OPTIONAL)[change.key] = change.value;
+  }
+  async function showSaveToProfile() {
+    try {
+      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {toast('Whitelist this website first.'); return;}
+      await loadSavedProfile();
+      const changes = profileSaveCandidates();
+      if (!changes.length) {toast('Nothing new to save: the answers on this page already match your profile.'); return;}
+      document.getElementById('jk-save-profile-host')?.remove();
+      const host = document.createElement('div');
+      host.id = 'jk-save-profile-host';
+      host.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:2147483647';
+      const root = host.attachShadow({mode: 'closed'});
+      const style = document.createElement('style');
+      style.textContent = ':host{all:initial}section{width:min(480px,90vw);max-height:80vh;overflow:auto;background:white;color:#17233b;' +
+        'border:1px solid #ccd4e0;border-radius:12px;padding:18px;box-shadow:0 8px 32px #0003;font:14px/1.45 system-ui,sans-serif}' +
+        'h2{margin:0 0 8px;font-size:18px}label{display:block;margin:8px 0}small{display:block;color:#536078;margin-left:24px;' +
+        'overflow-wrap:anywhere}button{margin:10px 8px 0 0;padding:9px 14px;border:0;border-radius:8px;cursor:pointer;font:inherit;' +
+        'background:#194e9e;color:#fff}button.secondary{background:#e6ebf3;color:#17233b}button:disabled{opacity:.5}';
+      root.appendChild(style);
+      const box = document.createElement('section');
+      root.appendChild(box);
+      const title = document.createElement('h2');
+      title.textContent = 'Save these answers to your profile?';
+      box.appendChild(title);
+      const note = document.createElement('p');
+      note.textContent = 'Only answers that differ from your saved profile are listed. Untick any you do not want saved. Nothing is submitted.';
+      box.appendChild(note);
+      const rows = changes.map(change => {
+        const row = document.createElement('label');
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.checked = true;
+        row.append(check, document.createTextNode(` ${change.label}`));
+        const detail = document.createElement('small');
+        detail.textContent = change.current ? `${change.current} → ${change.value}` : `(empty) → ${change.value}`;
+        row.appendChild(detail);
+        box.appendChild(row);
+        return {change, check};
+      });
+      const result = document.createElement('p');
+      result.setAttribute('role', 'status');
+      box.appendChild(result);
+      const save = document.createElement('button');
+      save.textContent = 'Save selected to profile';
+      save.onclick = async () => {
+        const chosen = rows.filter(({check}) => check.checked).map(({change}) => change);
+        if (!chosen.length) {result.textContent = 'Nothing is ticked.'; return;}
+        save.disabled = true;
+        try {
+          await saveToProfile(chosen);
+          result.textContent = `Saved ${chosen.length} answer${chosen.length === 1 ? '' : 's'} to your profile.`;
+          setTimeout(() => host.remove(), 1600);
+        } catch {
+          result.textContent = 'Could not save. Try again.';
+          save.disabled = false;
+        }
+      };
+      const close = document.createElement('button');
+      close.textContent = 'Close';
+      close.className = 'secondary';
+      close.onclick = () => host.remove();
+      box.append(save, close);
+      document.body.appendChild(host);
+    } catch { toast('Could not read this page. Reopen the extension and try again.'); }
+  }
 
   function copyText(
     text,
@@ -2452,6 +2570,18 @@
         'color:#fff!important;font:600 14px system-ui,sans-serif!important;box-shadow:0 4px 18px #0003!important;cursor:pointer!important;';
       now.addEventListener('click', () => { fillNow(); });
       document.body.appendChild(now);
+    }
+    if (!document.getElementById('jk-save-profile')) {
+      const keep = document.createElement('button');
+      keep.id = 'jk-save-profile';
+      keep.type = 'button';
+      keep.textContent = 'Save answers to profile';
+      keep.title = 'Fill the form in yourself, then save the answers you typed into your profile.';
+      keep.style.cssText = 'position:fixed!important;right:18px!important;bottom:122px!important;z-index:2147483646!important;' +
+        'padding:12px 18px!important;border:0!important;border-radius:24px!important;background:#6b4fa3!important;' +
+        'color:#fff!important;font:600 14px system-ui,sans-serif!important;box-shadow:0 4px 18px #0003!important;cursor:pointer!important;';
+      keep.addEventListener('click', () => { showSaveToProfile(); });
+      document.body.appendChild(keep);
     }
     installMemoryFieldUI();
     if (!launcherObserver) {
