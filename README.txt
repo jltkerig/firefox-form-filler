@@ -98,6 +98,13 @@ The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
 
+ONE-CLICK AUTOFILL AND FIXES - NEW IN 1.6.1
+The extension menu has Autofill this page, and whitelisted pages show an Autofill page button above Review & Fill.
+It fills every answer the review would pre-check, never replaces an answer already on the page, never submits,
+and opens the review for anything that still needs you. GitHub profile now sits under Portfolio on the profile
+page. The menu scrolls when it is taller than Firefox's panel. Save page for fixing is made from the background
+page, so the Save As window no longer closes the menu and cancels the download.
+
 EXPLAINABLE MATCHES AND VALIDATION - NEW IN 1.6.0
 Every proposal identifies its match reason and High or Medium confidence. Results
 separate verified fills, preserved or skipped answers, ignored fields and items

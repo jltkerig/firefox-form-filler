@@ -22,6 +22,7 @@ const friendly = {
   certifications:'Current certifications',
   showreelUrl:'Showreel or website link',
   ssnLastFour:'Last four digits of Social Security Number',
+  github:'GitHub profile',
   authorizedToWork:'Legally authorized to work', requiresSponsorship:'Requires sponsorship',
   desiredHoursPerWeek:'Preferred hours per week', referralSource:'How you heard about the job',
   currentlyAnEmployee:'Currently an employee of the hiring company',
@@ -133,7 +134,15 @@ async function init(){
   for(const [name,title] of [['profile','Contact and professional profile'],['optional','Application answers']]){
     const group=section(title);
     const merged={...JAMIE_DEFAULTS[name],...data[name]};
-    for(const [key,value] of Object.entries(merged))if(!Array.isArray(value))controls.push({name,key,el:field(group,key,value)});
+    for(const [key,value] of Object.entries(merged)){
+      if(Array.isArray(value))continue;
+      if(name==='optional'&&key==='github')continue; // shown under Portfolio, in the profile group below
+      controls.push({name,key,el:field(group,key,value)});
+      if(name==='profile'&&key==='portfolio'){ // the GitHub profile sits right under Portfolio; it is still saved with the application answers
+        const github={...JAMIE_DEFAULTS.optional,...data.optional}.github;
+        controls.push({name:'optional',key:'github',el:field(group,'github',github)});
+      }
+    }
   }
   const jobs=section('Work history'), schools=section('Education');
   const jobKeys=['employer','title','location','start','end','description'];

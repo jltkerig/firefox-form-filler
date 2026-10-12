@@ -8,6 +8,19 @@ browser.runtime.onMessage.addListener((message, sender, respond) => {
   return true;
 });
 
+// "Save page for fixing": the popup hands the report here. The popup closes as soon as the Save As window takes focus,
+// and a file link made inside it would close too, so the download is made from this page, which stays open.
+browser.runtime.onMessage.addListener((message, sender, respond) => {
+  if (message?.type !== 'save-fixing-report' || sender.tab || sender.id !== browser.runtime.id) return;
+  if (typeof message.json !== 'string' || typeof message.filename !== 'string') { respond({ok: false, error: 'Nothing to save.'}); return; }
+  const filename = message.filename.replace(/[^a-z0-9._-]+/gi, '-').slice(0, 140) || 'page-for-fixing.private.json';
+  const url = URL.createObjectURL(new Blob([message.json], {type: 'application/json'}));
+  browser.downloads.download({url, filename, saveAs: true, conflictAction: 'uniquify'})
+    .then(id => respond({ok: true, id}), error => respond({ok: false, error: String(error?.message || error)}))
+    .finally(() => setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000));
+  return true;
+});
+
 browser.menus.create({
   id: 'ignore-field',
   title: 'Ignore this field',

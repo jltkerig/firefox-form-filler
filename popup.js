@@ -1,6 +1,7 @@
 const enable = document.getElementById('enable');
 const disable = document.getElementById('disable');
 const saveExample = document.getElementById('save-example');
+const fillNow = document.getElementById('fill-now');
 const status = document.getElementById('status');
 document.getElementById('version').textContent = `Version ${browser.runtime.getManifest().version}`;
 let tab, pattern, id;
@@ -26,7 +27,18 @@ async function updateButtons() {
   enable.disabled = !pattern;
   disable.disabled = !pattern || (!entries.some(e => e.matches.includes(pattern)) &&
     !(await browser.permissions.contains({origins: [pattern]})));
+  fillNow.disabled = disable.disabled;  // the page can only be filled once the website is whitelisted
 }
+fillNow.addEventListener('click', async () => {
+  fillNow.disabled = true;
+  try {
+    await browser.tabs.sendMessage(tab.id, {type: 'fill-now'});
+    window.close();  // back to the page, where the result shows
+  } catch {
+    status.textContent = 'Could not reach the page. Reload it and try again.';
+    fillNow.disabled = false;
+  }
+});
 async function initialize() {
   await refreshList();
   [tab] = await browser.tabs.query({active: true, currentWindow: true});
@@ -155,17 +167,16 @@ saveExample.addEventListener('click', async () => {
       target: {tabId: tab.id}, func: captureCurrentForm, args: [includeInline]
     });
     if (!result?.result) throw new Error('No form data was returned.');
-    const blob = new Blob([JSON.stringify(result.result, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
     const safeHostname = result.result.hostname.replace(/[^a-z0-9.-]+/gi, '-').slice(0, 80) || 'page';
-    try {
-      await browser.downloads.download({
-        url,
-        filename: `page-for-fixing-${safeHostname}-${new Date().toISOString().slice(0, 10)}.private.json`,
-        saveAs: true,
-        conflictAction: 'uniquify'
-      });
-    } finally { setTimeout(() => URL.revokeObjectURL(url), 60000); }
+    status.textContent = 'Choose where to save in the Save As window…';
+    // The background page makes the download: this popup closes the moment the Save As window takes focus, and the
+    // file's temporary link would close with it, which made the download fail.
+    const reply = await browser.runtime.sendMessage({
+      type: 'save-fixing-report',
+      filename: `page-for-fixing-${safeHostname}-${new Date().toISOString().slice(0, 10)}.private.json`,
+      json: JSON.stringify(result.result, null, 2)
+    });
+    if (!reply?.ok) throw new Error(reply?.error || 'Firefox could not save the file.');
     status.textContent = `Saved a private fixing report with ${result.result.fields.length} fields. Review it before sharing.`;
   } catch (error) {
     status.textContent = `Could not save this page: ${error.message}`;

@@ -70,8 +70,10 @@ assert.match(read('popup.html'), />Save page for fixing</,
   'the popup must expose the private page capture under Page tools');
 assert.match(popup, /permissions\.request\(\{permissions: \['downloads'\]\}\)/,
   'page capture must request download access only when the user saves');
-assert.match(popup, /saveAs: true/,
+assert.match(read('background.js'), /saveAs: true/,
   'page capture must let the user choose the authorized private folder');
+assert.match(popup, /type: 'save-fixing-report'/,
+  'the popup must hand the report to the background page, which outlives the popup when Save As opens');
 assert.match(popup, /hostname: location\.hostname/,
   'page capture must identify the site without recording its full URL');
 assert.match(autofill, /privacy:'Contains structural field metadata only; no entered answers, cookies, storage, or page HTML\.'/,

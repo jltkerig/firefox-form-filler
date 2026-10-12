@@ -9,7 +9,7 @@
       destroyed = true;
       launcherObserver?.disconnect();
       clearTimeout(launcherRepairTimer);
-      ['jk-autofill-launcher', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
+      ['jk-autofill-launcher', 'jk-autofill-now', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
         .forEach(id => document.getElementById(id)?.remove());
       delete globalThis.__jamieJobAutofill;
     }
@@ -1959,6 +1959,31 @@
     } catch { toast('Could not load your profile. Reopen the extension and try again.'); }
   }
 
+  // One click: fills every answer the review would pre-check, with the same checks, and leaves the rest alone.
+  // It never replaces an answer already on the page and never submits; fields that still need a person open the review.
+  let fillingNow = false;
+  async function fillNow() {
+    if (fillingNow) return;
+    fillingNow = true;
+    try {
+      if (!(await browser.runtime.sendMessage({type:'can-fill'}))) {toast('Whitelist this website first.');return;}
+      await loadSavedProfile();
+      const {proposals} = collectReview();
+      let filled = 0, failed = 0;
+      for (const item of proposals) {
+        if (item.replaceExisting) continue;
+        try { if (await applyReviewed(item)) filled++; else failed++; } catch { failed++; }
+      }
+      const needs = collectReview().attention.length;
+      toast(`${filled} filled${failed ? ` · ${failed} could not be filled` : ''}${needs ? ` · ${needs} need your review` : ''}. Nothing was submitted.`);
+      if (needs || failed) showReview();
+    } catch { toast('Could not fill this page. Reopen the extension and try again.'); }
+    finally { fillingNow = false; }
+  }
+  browser.runtime.onMessage.addListener(message => {
+    if (message?.type === 'fill-now') { fillNow(); return Promise.resolve({started: true}); }
+  });
+
   function copyText(
     text,
     label
@@ -2416,6 +2441,18 @@
     document.body.appendChild(
       button
     );
+    if (!document.getElementById('jk-autofill-now')) {
+      const now = document.createElement('button');
+      now.id = 'jk-autofill-now';
+      now.type = 'button';
+      now.textContent = 'Autofill page';
+      now.title = 'Fill every answer it is sure about in one click. Nothing is submitted.';
+      now.style.cssText = 'position:fixed!important;right:18px!important;bottom:70px!important;z-index:2147483646!important;' +
+        'padding:12px 18px!important;border:0!important;border-radius:24px!important;background:#2f7d45!important;' +
+        'color:#fff!important;font:600 14px system-ui,sans-serif!important;box-shadow:0 4px 18px #0003!important;cursor:pointer!important;';
+      now.addEventListener('click', () => { fillNow(); });
+      document.body.appendChild(now);
+    }
     installMemoryFieldUI();
     if (!launcherObserver) {
       launcherObserver = new MutationObserver(() => {
