@@ -28,6 +28,7 @@ browser.runtime.onMessage.addListener((message, sender, respond) => {
       id, matches: [pattern], js: files, runAt: 'document_idle', persistAcrossSessions: true
     }]);
     await browser.scripting.executeScript({target: {tabId: sender.tab.id}, files});
+    await rememberWhitelistedSite(url.hostname, true);
   })().then(() => respond({ok: true}), error => respond({ok: false, error: String(error?.message || error)}));
   return true;
 });
@@ -97,7 +98,33 @@ async function migrateProfile() {
   catch (error) { console.error('Profile migration was not applied:', error); }
 }
 
+// Firefox clears scripts registered with the scripting API when the extension updates, which took the buttons off every
+// whitelisted site. The sites to bring back are the ones this extension holds access for, plus the list it keeps of
+// sites whitelisted with the floating button (which have no access of their own).
+async function restoreRegisteredScripts() {
+  const wanted = ['defaults.js', 'autofill.js'];
+  const entries = await browser.scripting.getRegisteredContentScripts();
+  const known = new Set(entries.map(entry => entry.id));
+  const granted = (await browser.permissions.getAll()).origins || [];
+  const saved = (await browser.storage.local.get('whitelistedSites')).whitelistedSites;
+  const hosts = new Set([...(Array.isArray(saved) ? saved : []),
+    ...granted.map(origin => /^https:\/\/([^/*]+)\/\*$/.exec(origin)?.[1]).filter(Boolean)]);
+  for (const host of hosts) {
+    const pattern = `https://${host}/*`;
+    if (known.has(`jamie-${host}`) || !(await browser.permissions.contains({origins: [pattern]}))) continue;
+    await browser.scripting.registerContentScripts([{
+      id: `jamie-${host}`, matches: [pattern], js: wanted, runAt: 'document_idle', persistAcrossSessions: true
+    }]).catch(() => {});
+  }
+  if (granted.includes('https://*/*') && !known.has('jk-launcher')) {
+    await browser.scripting.registerContentScripts([{
+      id: 'jk-launcher', matches: ['https://*/*'], js: ['launcher.js'], runAt: 'document_idle', persistAcrossSessions: true
+    }]).catch(() => {});
+  }
+}
+
 async function refreshRegisteredScripts() {
+  await restoreRegisteredScripts().catch(error => console.error('Could not restore whitelisted sites:', error));
   const wanted = ['defaults.js', 'autofill.js'];
   const entries = (await browser.scripting.getRegisteredContentScripts()).filter(entry => entry.id.startsWith('jamie-'));
   for (const entry of entries) {
@@ -105,8 +132,19 @@ async function refreshRegisteredScripts() {
   }
 }
 
-async function initializeExtension() {
-  await Promise.all([migrateProfile(), refreshRegisteredScripts()]);
+// The sites whitelisted so far, kept so they can be brought back after an update (see restoreRegisteredScripts).
+async function rememberWhitelistedSite(host, add) {
+  const saved = (await browser.storage.local.get('whitelistedSites')).whitelistedSites;
+  const sites = new Set(Array.isArray(saved) ? saved : []);
+  if (add) sites.add(host); else sites.delete(host);
+  await browser.storage.local.set({whitelistedSites: [...sites].sort()});
+}
+
+// Startup and install both initialize; one at a time, so a site is never registered twice at once.
+let initializing = Promise.resolve();
+function initializeExtension() {
+  initializing = initializing.then(() => Promise.all([migrateProfile(), refreshRegisteredScripts()]), () => {});
+  return initializing;
 }
 
 async function reconcileRemovedOrigins(permissions) {

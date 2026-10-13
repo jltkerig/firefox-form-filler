@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.3
+FIREFOX FORM FILLER - VERSION 1.6.4
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,13 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+WHITELISTED SITES SURVIVE UPDATES - NEW IN 1.6.4
+Firefox clears scripts an extension registers with the scripting API whenever the extension updates, which removed
+the buttons from every whitelisted site until it was whitelisted again. The extension now brings each whitelisted
+site back at startup and after an update, using the site access Firefox keeps plus a list of whitelisted sites it
+stores locally (hostnames only). If you updated to 1.6.3 and the buttons vanished, open the menu on the site and
+click Whitelist this website once; from then on, updates keep it.
 
 FLOATING WHITELIST BUTTON - NEW IN 1.6.3
 Settings in the extension menu has Floating Whitelist button on pages with forms. Switching it on asks Firefox once

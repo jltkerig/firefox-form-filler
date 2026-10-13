@@ -12,6 +12,14 @@ const themeSelect=document.getElementById('theme');
 browser.storage.local.get('settings').then(saved=>{themeSelect.value=FFF_THEME.apply(saved.settings?.theme);});
 themeSelect.addEventListener('change',async()=>{const theme=FFF_THEME.apply(themeSelect.value),saved=await browser.storage.local.get('settings');await browser.storage.local.set({settings:{...saved.settings,theme}});});
 
+// The sites whitelisted so far, kept so an extension update can bring them back (background.js restores them).
+async function rememberSite(host, add) {
+  const saved = (await browser.storage.local.get('whitelistedSites')).whitelistedSites;
+  const sites = new Set(Array.isArray(saved) ? saved : []);
+  if (add) sites.add(host); else sites.delete(host);
+  await browser.storage.local.set({whitelistedSites: [...sites].sort()});
+}
+
 async function refreshList() {
   const entries = (await browser.scripting.getRegisteredContentScripts()).filter(e => e.id.startsWith('jamie-'));
   const list = document.getElementById('whitelist');
@@ -112,6 +120,7 @@ enable.addEventListener('click', async () => {
       await browser.scripting.updateContentScripts([{id, js: contentScripts}]);
     }
     await browser.scripting.executeScript({target: {tabId: tab.id}, files: contentScripts});
+    await rememberSite(new URL(tab.url).hostname, true);
     status.textContent = 'Whitelisted. The floating button will appear on future visits.';
   } catch (error) { status.textContent = `Could not finish whitelisting: ${error.message}`; }
   finally { await updateButtons(); }
@@ -131,6 +140,7 @@ disable.addEventListener('click', async () => {
       target: {tabId: page.id}, func: () => globalThis.__jamieJobAutofill?.destroy()
     })));
     await browser.permissions.remove({origins: [pattern]}).catch(() => {});  // none of its own when added by the floating button
+    await rememberSite(new URL(tab.url).hostname, false);
     status.textContent = 'Removed from the whitelist. The button will no longer load here.';
   } catch (error) { status.textContent = `Could not remove this website: ${error.message}`; }
   finally { await updateButtons(); }
