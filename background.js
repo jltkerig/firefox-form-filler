@@ -3,8 +3,32 @@ browser.runtime.onMessage.addListener((message, sender, respond) => {
   let url;
   try { url = new URL(sender.url); } catch { respond(false); return; }
   if (url.protocol !== 'https:') { respond(false); return; }
-  browser.permissions.contains({origins: [`https://${url.hostname}/*`]})
-    .then(respond, () => respond(false));
+  const pattern = `https://${url.hostname}/*`;
+  // Allowed only where this website was whitelisted (its content script is registered), even when the broader
+  // all-websites access of the floating Whitelist button is held.
+  Promise.all([browser.permissions.contains({origins: [pattern]}), browser.scripting.getRegisteredContentScripts()])
+    .then(([granted, entries]) => respond(granted && entries.some(entry => entry.id.startsWith('jamie-') && entry.matches.includes(pattern))),
+      () => respond(false));
+  return true;
+});
+
+// The floating Whitelist button on a page asks here. It only works while that button is switched on in the menu, which
+// is when the extension holds access to all websites; the site is then whitelisted exactly as the menu would do it.
+browser.runtime.onMessage.addListener((message, sender, respond) => {
+  if (message?.type !== 'whitelist-this-site' || !sender.tab || sender.id !== browser.runtime.id || sender.frameId !== 0) return;
+  let url;
+  try { url = new URL(sender.url); } catch { respond({ok: false, error: 'Unreadable address.'}); return; }
+  if (url.protocol !== 'https:') { respond({ok: false, error: 'Only HTTPS websites can be whitelisted.'}); return; }
+  const pattern = `https://${url.hostname}/*`, id = `jamie-${url.hostname}`, files = ['defaults.js', 'autofill.js'];
+  (async () => {
+    const launcher = await browser.scripting.getRegisteredContentScripts({ids: ['jk-launcher']});
+    if (!launcher.length || !(await browser.permissions.contains({origins: [pattern]}))) throw new Error('The floating button is not switched on.');
+    const registered = await browser.scripting.getRegisteredContentScripts({ids: [id]});
+    if (!registered.length) await browser.scripting.registerContentScripts([{
+      id, matches: [pattern], js: files, runAt: 'document_idle', persistAcrossSessions: true
+    }]);
+    await browser.scripting.executeScript({target: {tabId: sender.tab.id}, files});
+  })().then(() => respond({ok: true}), error => respond({ok: false, error: String(error?.message || error)}));
   return true;
 });
 

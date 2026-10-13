@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.2
+FIREFOX FORM FILLER - VERSION 1.6.3
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,15 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+FLOATING WHITELIST BUTTON - NEW IN 1.6.3
+Settings in the extension menu has Floating Whitelist button on pages with forms. Switching it on asks Firefox once
+for access to all websites. Pages that have at least three answerable fields (and no password field) then show a
+Whitelist this site button; clicking it whitelists that website without opening the menu. The button's script
+(launcher.js) only counts visible form fields and sends the site name when clicked: it reads no answers, page text
+or storage, and it does not load on sites that are already whitelisted. Review & Fill, Autofill and Save still
+run only on whitelisted sites. Switching the setting off removes the all-websites access and the launcher, and
+takes sites added with it off the whitelist (add them again from the menu).
 
 SAVE PAGE ANSWERS TO YOUR PROFILE - NEW IN 1.6.2
 Fill in a form yourself, then choose Save this page's answers to my profile in the extension menu (or the purple

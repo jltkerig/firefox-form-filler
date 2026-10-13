@@ -3,6 +3,7 @@ const disable = document.getElementById('disable');
 const saveExample = document.getElementById('save-example');
 const fillNow = document.getElementById('fill-now');
 const saveToProfile = document.getElementById('save-to-profile');
+const floating = document.getElementById('floating-whitelist');
 const status = document.getElementById('status');
 document.getElementById('version').textContent = `Version ${browser.runtime.getManifest().version}`;
 let tab, pattern, id;
@@ -26,11 +27,43 @@ async function refreshList() {
 async function updateButtons() {
   const entries = await refreshList();
   enable.disabled = !pattern;
-  disable.disabled = !pattern || (!entries.some(e => e.matches.includes(pattern)) &&
-    !(await browser.permissions.contains({origins: [pattern]})));
+  // Whitelisted = its script is registered, or access was granted for exactly this site (all-websites access, which the
+  // floating Whitelist button holds, does not count as having whitelisted every site).
+  const granted = pattern ? (await browser.permissions.getAll()).origins?.includes(pattern) : false;
+  disable.disabled = !pattern || (!entries.some(e => e.matches.includes(pattern)) && !granted);
+  floating.checked = (await browser.scripting.getRegisteredContentScripts({ids: ['jk-launcher']})).length > 0;
   fillNow.disabled = disable.disabled;  // the page can only be filled once the website is whitelisted
   saveToProfile.disabled = disable.disabled;
 }
+floating.addEventListener('change', async () => {
+  const turningOn = floating.checked;
+  floating.disabled = true;
+  try {
+    if (turningOn) {
+      const granted = await browser.permissions.request({origins: ['https://*/*']});
+      if (!granted) { floating.checked = false; status.textContent = 'Not turned on. Access to all websites was not granted.'; return; }
+      const registered = await browser.scripting.getRegisteredContentScripts({ids: ['jk-launcher']});
+      if (!registered.length) await browser.scripting.registerContentScripts([{
+        id: 'jk-launcher', matches: ['https://*/*'], js: ['launcher.js'], runAt: 'document_idle', persistAcrossSessions: true
+      }]);
+      status.textContent = 'Floating Whitelist button is on. It shows on pages that have forms.';
+    } else {
+      await browser.scripting.unregisterContentScripts({ids: ['jk-launcher']}).catch(() => {});
+      await browser.permissions.remove({origins: ['https://*/*']}).catch(() => {});
+      // A site added by the floating button had no access of its own: take those off the whitelist too.
+      const granted = (await browser.permissions.getAll()).origins || [];
+      const orphans = (await browser.scripting.getRegisteredContentScripts())
+        .filter(e => e.id.startsWith('jamie-') && !e.matches.every(match => granted.includes(match)));
+      if (orphans.length) await browser.scripting.unregisterContentScripts({ids: orphans.map(e => e.id)});
+      status.textContent = orphans.length
+        ? `Floating Whitelist button is off. ${orphans.length} site${orphans.length === 1 ? '' : 's'} added with it need whitelisting again from this menu.`
+        : 'Floating Whitelist button is off.';
+    }
+  } catch (error) {
+    floating.checked = !turningOn;
+    status.textContent = `Could not change this setting: ${error.message}`;
+  } finally { floating.disabled = false; await updateButtons(); }
+});
 saveToProfile.addEventListener('click', async () => {
   saveToProfile.disabled = true;
   try {
@@ -97,7 +130,7 @@ disable.addEventListener('click', async () => {
     await Promise.allSettled(pages.map(page => browser.scripting.executeScript({
       target: {tabId: page.id}, func: () => globalThis.__jamieJobAutofill?.destroy()
     })));
-    await browser.permissions.remove({origins: [pattern]});
+    await browser.permissions.remove({origins: [pattern]}).catch(() => {});  // none of its own when added by the floating button
     status.textContent = 'Removed from the whitelist. The button will no longer load here.';
   } catch (error) { status.textContent = `Could not remove this website: ${error.message}`; }
   finally { await updateButtons(); }

@@ -19,6 +19,7 @@ const files = [
   'popup.html',
   'popup.css',
   'popup.js',
+  'launcher.js',
   'jk-toolbar-v112.svg',
 ];
 

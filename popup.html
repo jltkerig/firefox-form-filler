@@ -17,6 +17,8 @@
     <small>Firefox will ask where to save. Choose the private firefox-form-filler-saved-pages folder. The report omits entered answers, hidden fields, cookies, storage, and full page HTML.</small>
   </details>
   <details id="settings"><summary>Settings</summary>
+    <label><input id="floating-whitelist" type="checkbox"> Floating Whitelist button on pages with forms</label>
+    <small>Asks Firefox once for access to all websites. The button's script only counts form fields to decide whether to show itself; it reads no answers or page text.</small>
     <label class="theme-setting">Theme<select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </details>
   <button id="edit-profile">Edit my profile</button>

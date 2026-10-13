@@ -26,7 +26,9 @@ assert.match(read('README.txt'), new RegExp(`^FIREFOX FORM FILLER - VERSION ${ma
   'README and manifest versions must match');
 assert.equal(packageJson.version, manifest.version, 'package and manifest versions must match');
 
-for (const name of ['autofill.js', 'background.js', 'options.js', 'popup.js', 'storage-schema.js']) {
+assert.doesNotMatch(read('launcher.js'), /\.value\b|innerText|storage|jamieProfile|PROFILE|OPTIONAL|answerFor|fetch\s*\(/,
+  'the floating Whitelist button script must not read answers, page text, or storage, or use the network');
+for (const name of ['autofill.js', 'background.js', 'launcher.js', 'options.js', 'popup.js', 'storage-schema.js']) {
   const source = read(name);
   assert.doesNotMatch(source, /browser\.storage\.sync|chrome\.storage\.sync/,
     `${name} must keep answers in Firefox local storage`);
