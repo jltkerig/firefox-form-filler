@@ -85,6 +85,29 @@ test('popup fits without scrollbars and saves the selected theme', async ({page}
   expect(await page.evaluate(()=>globalThis.__themeWrites.at(-1).settings)).toEqual({bitwardenCompatibilityMode:true,theme:'dark'});
 });
 
+test('Start on this page runs the extension on the open page even when the website is not whitelisted', async ({page}) => {
+  await page.addInitScript(() => {
+    globalThis.__executed = [];
+    globalThis.browser = {
+      runtime: {getManifest: () => ({version: '1.6.6'}), openOptionsPage: async () => {}},
+      storage: {local: {get: async () => ({}), set: async () => {}}},
+      scripting: {
+        getRegisteredContentScripts: async () => [],
+        registerContentScripts: async () => {},
+        executeScript: async options => { globalThis.__executed.push(options); return []; }
+      },
+      tabs: {query: async () => [{id: 7, url: 'https://careers.example/apply'}]},
+      permissions: {contains: async () => false, getAll: async () => ({origins: []})}
+    };
+  });
+  await page.goto(popupUrl);
+  await expect(page.locator('#start-here')).toBeEnabled();
+  await page.locator('#start-here').click();
+  await expect(page.locator('#status')).toContainText('Started on this page');
+  const executed = await page.evaluate(() => globalThis.__executed);
+  expect(executed).toEqual([{target: {tabId: 7}, files: ['defaults.js', 'autofill.js']}]);
+});
+
 test('options shows active variants, mappings, and backup health',async({page})=>{
   await page.addInitScript(profile=>{const stored={profileSchemaVersion:4,jamieProfile:profile,
     profileVariants:[{id:'default',name:'Default',data:profile},{id:'technical',name:'Technical',data:profile}],activeProfileVariant:'technical',

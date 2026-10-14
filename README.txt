@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.5
+FIREFOX FORM FILLER - VERSION 1.6.6
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,11 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+START ON THIS PAGE BUTTON - NEW IN 1.6.6
+The menu has a Start on this page button under Whitelist this website. It runs the extension on the page you have open
+right now, so the floating buttons appear even when the website is not whitelisted or they did not show up. On a
+website that already has access but no buttons, it also sets the site up for later visits.
 
 SITES ALLOWED FROM FIREFOX'S PANEL GET THEIR BUTTONS - NEW IN 1.6.5
 Allowing a website in Firefox's own Extensions panel ("Always allow on this site") gives the extension access but

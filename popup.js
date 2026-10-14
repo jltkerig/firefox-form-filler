@@ -2,6 +2,7 @@ const enable = document.getElementById('enable');
 const disable = document.getElementById('disable');
 const saveExample = document.getElementById('save-example');
 const fillNow = document.getElementById('fill-now');
+const startHere = document.getElementById('start-here');
 const saveToProfile = document.getElementById('save-to-profile');
 const floating = document.getElementById('floating-whitelist');
 const status = document.getElementById('status');
@@ -35,6 +36,7 @@ async function refreshList() {
 async function updateButtons() {
   const entries = await refreshList();
   enable.disabled = !pattern;
+  startHere.disabled = !pattern;
   // Whitelisted = its script is registered, or access was granted for exactly this site (all-websites access, which the
   // floating Whitelist button holds, does not count as having whitelisted every site).
   const granted = pattern ? (await browser.permissions.getAll()).origins?.includes(pattern) : false;
@@ -160,6 +162,27 @@ disable.addEventListener('click', async () => {
     await rememberSite(new URL(tab.url).hostname, false);
     status.textContent = 'Removed from the whitelist. The button will no longer load here.';
   } catch (error) { status.textContent = `Could not remove this website: ${error.message}`; }
+  finally { await updateButtons(); }
+});
+// Starts the extension on this page right now: for a website that is not whitelisted yet, or one where the buttons did
+// not show up. The page is the one you have open, so Firefox lets the popup run the script on it. A website that has
+// access but no registered script is set up as well, so the buttons come back on later visits too.
+startHere.addEventListener('click', async () => {
+  startHere.disabled = true;
+  try {
+    if (!tab?.id || !pattern) throw new Error('Open an HTTPS job application first.');
+    const granted = (await browser.permissions.getAll()).origins?.includes(pattern);
+    const registered = await browser.scripting.getRegisteredContentScripts({ids: [id]});
+    if (granted && !registered.length) {
+      await browser.scripting.registerContentScripts([{
+        id, matches: [pattern], js: contentScripts, runAt: 'document_idle', persistAcrossSessions: true
+      }]);
+      await rememberSite(new URL(tab.url).hostname, true);
+    }
+    await browser.scripting.executeScript({target: {tabId: tab.id}, files: contentScripts});
+    status.textContent = granted ? 'Started on this page. The buttons are at the bottom right of the page.'
+      : 'Started on this page for now. The buttons are at the bottom right; whitelist this website to keep them on future visits.';
+  } catch (error) { status.textContent = `Could not start on this page: ${error.message}`; }
   finally { await updateButtons(); }
 });
 initialize().catch(error => { status.textContent = error.message; });
