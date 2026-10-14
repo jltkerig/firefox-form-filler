@@ -105,7 +105,24 @@ async function initialize() {
   document.getElementById('site').textContent = url.hostname;
   saveExample.disabled = false;
   await updateButtons();
-  status.textContent = disable.disabled ? 'Autofill is not enabled for this website.' : 'Autofill is enabled for this website.';
+  // Site access can be given in Firefox's own extensions panel ("Always allow on this site"), which registers no script
+  // and so shows no buttons. The popup says the site is enabled in that state, so it finishes the job here.
+  let repaired = false;
+  const registered = await browser.scripting.getRegisteredContentScripts({ids: [id]});
+  if (!registered.length && (await browser.permissions.getAll()).origins?.includes(pattern)) {
+    try {
+      await browser.scripting.registerContentScripts([{
+        id, matches: [pattern], js: contentScripts, runAt: 'document_idle', persistAcrossSessions: true
+      }]);
+      await browser.scripting.executeScript({target: {tabId: tab.id}, files: contentScripts});
+      await rememberSite(url.hostname, true);
+      repaired = true;
+    } catch (error) { status.textContent = `Could not finish enabling this website: ${error.message}`; return; }
+    await updateButtons();
+  }
+  status.textContent = disable.disabled ? 'Autofill is not enabled for this website.'
+    : repaired ? 'Autofill is enabled for this website. The buttons should now be on the page.'
+    : 'Autofill is enabled for this website.';
 }
 enable.addEventListener('click', async () => {
   enable.disabled = disable.disabled = true;

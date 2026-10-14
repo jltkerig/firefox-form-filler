@@ -64,12 +64,12 @@ test('popup fits without scrollbars and saves the selected theme', async ({page}
       }},
       scripting:{getRegisteredContentScripts:async()=>[]},
       tabs:{query:async()=>[{id:1,url:'https://careers.example/apply'}]},
-      permissions:{contains:async()=>false}
+      permissions:{contains:async()=>false,getAll:async()=>({origins:[]})}
     };
   });
   await page.goto(popupUrl);
   await expect(page.locator('#status')).toHaveText('Autofill is not enabled for this website.');
-  expect(await page.locator('#status').evaluate(status=>status.previousElementSibling?.id)).toBe('disable');
+  expect(await page.locator('#status').evaluate(status=>status.previousElementSibling?.id)).toBe('save-to-profile');
   await expect(page.locator('#settings')).not.toHaveAttribute('open','');
   await expect(page.locator('#settings summary')).toHaveText('Settings');
   await page.locator('#settings summary').click();

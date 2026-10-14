@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.4
+FIREFOX FORM FILLER - VERSION 1.6.5
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,12 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+SITES ALLOWED FROM FIREFOX'S PANEL GET THEIR BUTTONS - NEW IN 1.6.5
+Allowing a website in Firefox's own Extensions panel ("Always allow on this site") gives the extension access but
+used to leave it with no script on that site, so no buttons showed up while the menu still said the site was
+enabled. The extension now sets the site up when access is granted, and opening the menu on a site that has access
+but no buttons repairs it and puts the buttons on the page.
 
 WHITELISTED SITES SURVIVE UPDATES - NEW IN 1.6.4
 Firefox clears scripts an extension registers with the scripting API whenever the extension updates, which removed

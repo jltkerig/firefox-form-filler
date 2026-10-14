@@ -160,6 +160,29 @@ async function reconcileRemovedOrigins(permissions) {
   }
 }
 
+// Access to one website can also be given in Firefox's own extensions panel ("Always allow on this site"), which
+// registers no script, so no buttons showed up there. The script is registered here as the popup would have done, and
+// put into the tabs already open on that site.
+async function registerGrantedSites(permissions) {
+  const hosts = (permissions?.origins || []).map(origin => /^https:\/\/([^/*]+)\/\*$/.exec(origin)?.[1]).filter(Boolean);
+  for (const host of hosts) {
+    const pattern = `https://${host}/*`, id = `jamie-${host}`, files = ['defaults.js', 'autofill.js'];
+    const known = await browser.scripting.getRegisteredContentScripts({ids: [id]});
+    if (!known.length) await browser.scripting.registerContentScripts([{
+      id, matches: [pattern], js: files, runAt: 'document_idle', persistAcrossSessions: true
+    }]);
+    for (const tab of await browser.tabs.query({url: pattern})) {
+      await browser.scripting.executeScript({target: {tabId: tab.id}, files}).catch(() => {});
+    }
+    await rememberWhitelistedSite(host, true);
+  }
+}
+
+browser.permissions.onAdded.addListener(permissions => {
+  initializing = initializing.then(() => registerGrantedSites(permissions), () => {})
+    .catch(error => console.error('Could not set up a newly allowed site:', error));
+});
+
 browser.permissions.onRemoved.addListener(permissions => {
   reconcileRemovedOrigins(permissions).catch(error => console.error('Could not reconcile removed site access:', error));
 });
