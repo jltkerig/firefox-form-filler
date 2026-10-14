@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.7
+FIREFOX FORM FILLER - VERSION 1.6.8
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,12 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+MICROSOFT FORMS AND OTHER TRUSTED TYPES PAGES - NEW IN 1.6.8
+Pages that require Trusted Types (Microsoft Forms, Google's sites) refuse plain text for the panel and menu markup the
+extension builds, which stopped it from starting there. It now builds that markup in a way those pages accept.
+Microsoft Forms also labels each text box "Single line text" and names the real question separately; the extension now
+reads the question, so Full Name, Email Address, Phone Number and similar questions are recognized.
 
 PHONE EXTENSION FIELDS - NEW IN 1.6.7
 A field labelled Phone Extension (or Ext., Telephone extension number and similar) used to be filled with the phone

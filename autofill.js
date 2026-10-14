@@ -1258,13 +1258,13 @@
     if (!memoryMenu) {
       memoryMenu = document.createElement('div');
       memoryMenu.id = 'jk-field-memory-menu';
-      memoryMenu.innerHTML = `
+      setStaticHtml(memoryMenu, `
         <div class="jk-memory-title">Field memory</div>
         <button type="button" data-memory="remember">Remember this field</button>
         <button type="button" data-memory="update">Update this field</button>
         <button type="button" data-memory="remove">Remove this field</button>
         <button type="button" data-memory="map">Map to profile field</button>
-        <button type="button" data-memory="ignore">Ignore this field</button>`;
+        <button type="button" data-memory="ignore">Ignore this field</button>`);
       memoryMenu.addEventListener('mousedown', event => event.preventDefault());
       memoryMenu.addEventListener('click', async event => {
         const button = event.target.closest('button[data-memory]');
@@ -1385,7 +1385,11 @@
   function directLabel(el) {
     const explicit = [...(el.labels || [])].map(label => label.textContent.trim()).filter(Boolean);
     const labelled = (el.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => rootElementById(el, id)?.textContent || '').join(' ').trim();
-    const text = explicit[0] || el.getAttribute('aria-label') || labelled || el.getAttribute('placeholder') ||
+    // Microsoft Forms gives every text box the aria-label "Single line text" and names the real question through
+    // aria-labelledby; a label that only names the kind of control never beats the question it points to.
+    const ariaLabel = el.getAttribute('aria-label') || '';
+    const genericAria = /^\s*(?:(?:single|multi(?:ple)?)[\s-]*line(?: text)?|enter your answer|text(?: ?(?:box|field|input))?|answer|input)\s*$/i.test(ariaLabel);
+    const text = explicit[0] || (genericAria && labelled) || ariaLabel || labelled || el.getAttribute('placeholder') ||
       (isChoice(el) ? el.textContent : '') || el.getAttribute('name') || el.id || '';
     return normalize(text.replace(/([a-z])([A-Z])/g, '$1 $2'));
   }
@@ -2167,7 +2171,7 @@
     panel.id =
       'jk-autofill-panel';
 
-    panel.innerHTML = `
+    setStaticHtml(panel, `
       <div class="jk-head">
         <strong>Job Autofill</strong>
         <button type="button" data-close>×</button>
@@ -2236,7 +2240,7 @@
         Veteran status uses your chosen answer.
         Other sensitive self-ID questions are left for you.
       </p>
-    `;
+    `);
 
     const jobButtons = panel.querySelector('[data-job-buttons]');
     PROFILE.jobs.forEach((job, index) => {
@@ -2489,6 +2493,38 @@
       loadSavedProfile().then(() => activeMemoryField && updateMemoryControl(activeMemoryField)).catch(() => {});
     }
   });
+  // The extension's own fixed markup (the field memory menu and the Review panel), put into an element. Pages that
+  // require Trusted Types (Microsoft Forms, Google) refuse a plain string for innerHTML, which stopped the extension
+  // there. The page's policies are not usable, so a policy of its own is tried; where the page does not allow that, the
+  // markup is built from elements.
+  let htmlPolicy;
+  function setStaticHtml(el, html) {
+    try { el.innerHTML = html; return; } catch {}
+    try {
+      htmlPolicy = htmlPolicy || globalThis.trustedTypes?.createPolicy('jk-autofill', {createHTML: value => value});
+      if (htmlPolicy) { el.innerHTML = htmlPolicy.createHTML(html); return; }
+    } catch {}
+    const fragment = document.createDocumentFragment();
+    const stack = [fragment];
+    const token = /<(\/?)([a-z][a-z0-9]*)((?:[^<>"']|"[^"]*"|'[^']*')*)>|([^<]+)/gi;
+    let match;
+    while ((match = token.exec(html))) {
+      const [, closing, tag, attributes, text] = match;
+      const parent = stack[stack.length - 1];
+      if (text !== undefined) {
+        if (text.trim()) parent.appendChild(document.createTextNode(text.replace(/\s+/g, ' ')));
+      } else if (closing) {
+        if (stack.length > 1) stack.pop();
+      } else {
+        const node = document.createElement(tag.toLowerCase());
+        for (const [, name, quoted] of attributes.matchAll(/([a-z][\w:-]*)(?:\s*=\s*"([^"]*)")?/gi)) node.setAttribute(name, quoted ?? '');
+        parent.appendChild(node);
+        if (!/^(?:hr|br|img|input)$/i.test(tag)) stack.push(node);
+      }
+    }
+    el.replaceChildren(fragment);
+  }
+
   let toastTimer;
 
   function toast(message) {

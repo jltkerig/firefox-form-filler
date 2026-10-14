@@ -188,6 +188,54 @@ test('a phone extension field on its own is left empty, not given the phone numb
   await expect(page.locator('[name="phoneExtension"]')).toHaveValue('');
 });
 
+test('a text box named only "Single line text" is read through its aria-labelledby question (Microsoft Forms)', async ({page}) => {
+  await page.setContent(`<form>
+    <div id="q1">1.<span>Full Name</span></div><div id="i1">Required to answer. Single line text.</div>
+    <input name="a" aria-label="Single line text" aria-labelledby="q1 i1" placeholder="Enter your answer">
+    <div id="q2">2.<span>Email Address</span></div><div id="i2">Required to answer. Single line text.</div>
+    <input name="b" aria-label="Single line text" aria-labelledby="q2 i2" placeholder="Enter your answer">
+    <div id="q3">3.<span>Phone Number</span></div><div id="i3">Required to answer. Single line text.</div>
+    <input name="c" aria-label="Single line text" aria-labelledby="q3 i3" placeholder="Enter your answer">
+    <button type="submit">Submit</button>
+  </form>`);
+  await injectAutofill(page);
+  await page.locator('#jk-autofill-now').click();
+  await expect(page.locator('[name="a"]')).toHaveValue('Test Applicant');
+  await expect(page.locator('[name="b"]')).toHaveValue('autofill@example.invalid');
+  await expect(page.locator('[name="c"]')).toHaveValue('2025550147');
+});
+
+test('works on a page that requires Trusted Types (Microsoft Forms, Google)', async ({page}) => {
+  await page.setContent(`<!doctype html><html><head>
+    <meta http-equiv="Content-Security-Policy" content="require-trusted-types-for 'script'"></head><body><form>
+    <div id="q1">1.<span>Full Name</span></div>
+    <input name="a" aria-label="Single line text" aria-labelledby="q1">
+    <div id="q2">2.<span>Email Address</span></div>
+    <input name="b" aria-label="Single line text" aria-labelledby="q2">
+  </form></body></html>`);
+  // Like a content script: its own script world, where the page's Trusted Types rule still applies to innerHTML.
+  const client = await page.context().newCDPSession(page);
+  const {frameTree} = await client.send('Page.getFrameTree');
+  const {executionContextId} = await client.send('Page.createIsolatedWorld', {frameId: frameTree.frame.id, worldName: 'extension'});
+  const run = async expression => {
+    const result = await client.send('Runtime.evaluate', {contextId: executionContextId, expression, awaitPromise: true, returnByValue: true});
+    if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
+    return result.result.value;
+  };
+  await run(`(() => {
+    const stored = {jamieProfile: ${JSON.stringify(syntheticProfile)}, learnedFields: [], ignoredFields: [], siteMappings: [], settings: {}};
+    globalThis.browser = {runtime: {sendMessage: async () => true, onMessage: {addListener() {}}}, menus: {getTargetElement: () => null},
+      storage: {local: {get: async () => structuredClone(stored), set: async values => { Object.assign(stored, values); }}, onChanged: {addListener() {}}}};
+  })()`);
+  const {readFileSync} = await import('node:fs');
+  await run(readFileSync(defaultsPath, 'utf8'));
+  await run(readFileSync(autofillPath, 'utf8'));
+  expect(await run(`!!document.getElementById('jk-autofill-now')`)).toBe(true);
+  await run(`document.getElementById('jk-autofill-now').click()`);
+  await expect(page.locator('[name="a"]')).toHaveValue('Test Applicant');
+  await expect(page.locator('[name="b"]')).toHaveValue('autofill@example.invalid');
+});
+
 test('answer-free site mapping fills from the active profile and explains the match', async ({page}) => {
   await page.route('https://mapped.example/**',route=>route.fulfill({contentType:'text/html',body:'<label>Applicant municipality <input name="municipality-code"></label>'}));
   await page.goto('https://mapped.example/apply');
