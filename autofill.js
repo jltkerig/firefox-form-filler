@@ -1533,6 +1533,12 @@
     const mapped=findSiteMapping(el);
     if(mapped){const raw=(mapped.section==='profile'?PROFILE:OPTIONAL)[mapped.profileKey],typed=typedAnswer(el,raw);
       if(typed)return {value:typed,siteMapped:true,matchReason:`Site mapping → ${mapped.section}.${mapped.profileKey}`,confidence:'High'};}
+    // A phone extension is a short number. The phone number, a device type such as "Mobile", or a remembered answer that
+    // is not a number never goes into it, however the page labels its neighbouring fields.
+    if (/\b(?:phone|telephone|tel|mobile|cell|office|work)\b.*\bext(?:ension)?\b|^ext(?:ension)?\b|\bext(?:ension)? (?:number|no)\b/.test(direct)) {
+      const remembered = String(findLearnedField(el)?.answer || '').trim();
+      return /^\d{1,8}$/.test(remembered) ? {value: remembered, learned: true, matchReason: 'Exact remembered field', confidence: 'High'} : null;
+    }
     if (isWorkPreferenceQuestion(el) && OPTIONAL.employmentType) return workPreferenceAnswer(el);
     const configuredChoice = configuredChoiceAnswer(el);
     if (configuredChoice !== undefined) return configuredChoice;

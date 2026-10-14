@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.6
+FIREFOX FORM FILLER - VERSION 1.6.7
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,11 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+PHONE EXTENSION FIELDS - NEW IN 1.6.7
+A field labelled Phone Extension (or Ext., Telephone extension number and similar) used to be filled with the phone
+number, because its label contains the word phone. It is now left empty unless a remembered answer for it is a
+short number.
 
 START ON THIS PAGE BUTTON - NEW IN 1.6.6
 The menu has a Start on this page button under Whitelist this website. It runs the extension on the page you have open

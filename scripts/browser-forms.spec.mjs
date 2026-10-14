@@ -149,6 +149,45 @@ test('fills recognized fields, preserves existing values, and skips credentials'
   await expect(page.locator('[name="password"]')).toHaveValue('');
 });
 
+test('a phone extension field does not get the phone number', async ({page}) => {
+  await page.setContent(`<form>
+    <label>Phone <input type="tel" name="phone"></label>
+    <label>Phone Extension <input name="phoneExtension"></label>
+    <label>Mobile phone ext. <input name="mobileExt"></label>
+    <label>Telephone extension number <input name="telExt"></label>
+    <button type="submit">Submit</button>
+  </form>`);
+  await injectAutofill(page);
+  await page.locator('#jk-autofill-now').click();
+  await expect(page.locator('[name="phone"]')).toHaveValue('2025550147');
+  for (const name of ['phoneExtension', 'mobileExt', 'telExt']) await expect(page.locator(`[name="${name}"]`)).toHaveValue('');
+});
+
+test('a remembered answer that is not a number is never put into a phone extension field', async ({page}) => {
+  await page.setContent(`<form>
+    <label>Phone <input type="tel" name="phone"></label>
+    <label>Phone Extension <input name="phoneExtension"></label>
+    <button type="submit">Submit</button>
+  </form>`);
+  const remembered = answer => [{id:'learned-1', question:'phone extension', name:'phoneextension', placeholder:'', type:'text',
+    host:'', label:'Phone Extension', answer, updatedAt:1}];
+  await injectAutofill(page, {learnedFields: remembered('Mobile')});
+  await page.locator('#jk-autofill-now').click();
+  await expect(page.locator('[name="phone"]')).toHaveValue('2025550147');
+  await expect(page.locator('[name="phoneExtension"]')).toHaveValue('');
+});
+
+test('a phone extension field on its own is left empty, not given the phone number', async ({page}) => {
+  await page.setContent(`<form>
+    <label>Phone Extension <input name="phoneExtension"></label>
+    <label>Extension <input name="plainExtension"></label>
+    <button type="submit">Submit</button>
+  </form>`);
+  await injectAutofill(page);
+  await page.locator('#jk-autofill-now').click();
+  await expect(page.locator('[name="phoneExtension"]')).toHaveValue('');
+});
+
 test('answer-free site mapping fills from the active profile and explains the match', async ({page}) => {
   await page.route('https://mapped.example/**',route=>route.fulfill({contentType:'text/html',body:'<label>Applicant municipality <input name="municipality-code"></label>'}));
   await page.goto('https://mapped.example/apply');
