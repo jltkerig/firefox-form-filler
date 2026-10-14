@@ -97,13 +97,14 @@ test('Start on this page runs the extension on the open page even when the websi
         executeScript: async options => { globalThis.__executed.push(options); return []; }
       },
       tabs: {query: async () => [{id: 7, url: 'https://careers.example/apply'}]},
-      permissions: {contains: async () => false, getAll: async () => ({origins: []})}
+      permissions: {contains: async () => false, getAll: async () => ({origins: []}), request: async options => { globalThis.__requested = options; return true; }}
     };
   });
   await page.goto(popupUrl);
   await expect(page.locator('#start-here')).toBeEnabled();
   await page.locator('#start-here').click();
-  await expect(page.locator('#status')).toContainText('Started on this page');
+  await expect(page.locator('#status')).toContainText('Started on this page, and this website is whitelisted');
+  expect(await page.evaluate(() => globalThis.__requested)).toEqual({origins: ['https://careers.example/*']});
   const executed = await page.evaluate(() => globalThis.__executed);
   expect(executed).toEqual([{target: {tabId: 7}, files: ['defaults.js', 'autofill.js']}]);
 });

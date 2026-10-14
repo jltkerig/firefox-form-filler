@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.8
+FIREFOX FORM FILLER - VERSION 1.6.9
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -97,6 +97,12 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+START ON THIS PAGE NOW WHITELISTS - NEW IN 1.6.9
+Autofill only fills on websites you have whitelisted, so Start on this page in the menu used to put the buttons on a
+page where pressing Autofill then said to whitelist the website first. It now does both in one click: Firefox asks
+once for access to the website (nothing is asked when it already has it), the website is whitelisted for later
+visits, and the buttons are put on the open page, so Autofill works there straight away.
 
 MICROSOFT FORMS AND OTHER TRUSTED TYPES PAGES - NEW IN 1.6.8
 Pages that require Trusted Types (Microsoft Forms, Google's sites) refuse plain text for the panel and menu markup the

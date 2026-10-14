@@ -164,24 +164,25 @@ disable.addEventListener('click', async () => {
   } catch (error) { status.textContent = `Could not remove this website: ${error.message}`; }
   finally { await updateButtons(); }
 });
-// Starts the extension on this page right now: for a website that is not whitelisted yet, or one where the buttons did
-// not show up. The page is the one you have open, so Firefox lets the popup run the script on it. A website that has
-// access but no registered script is set up as well, so the buttons come back on later visits too.
+// Starts the extension on this page right now, for a website that is not whitelisted yet or one where the buttons did
+// not show up: Firefox asks once for access to this website (nothing is asked if it already has it), the buttons are
+// registered for later visits, and the page gets them straight away, so Autofill works on this page without a
+// separate whitelisting step. The access request comes first, straight from the click, as Firefox requires.
 startHere.addEventListener('click', async () => {
   startHere.disabled = true;
   try {
     if (!tab?.id || !pattern) throw new Error('Open an HTTPS job application first.');
-    const granted = (await browser.permissions.getAll()).origins?.includes(pattern);
+    const granted = await browser.permissions.request({origins: [pattern]});
+    if (!granted) { status.textContent = 'Not started. Site access was not granted.'; return; }
     const registered = await browser.scripting.getRegisteredContentScripts({ids: [id]});
-    if (granted && !registered.length) {
+    if (!registered.length) {
       await browser.scripting.registerContentScripts([{
         id, matches: [pattern], js: contentScripts, runAt: 'document_idle', persistAcrossSessions: true
       }]);
-      await rememberSite(new URL(tab.url).hostname, true);
     }
+    await rememberSite(new URL(tab.url).hostname, true);
     await browser.scripting.executeScript({target: {tabId: tab.id}, files: contentScripts});
-    status.textContent = granted ? 'Started on this page. The buttons are at the bottom right of the page.'
-      : 'Started on this page for now. The buttons are at the bottom right; whitelist this website to keep them on future visits.';
+    status.textContent = 'Started on this page, and this website is whitelisted. The buttons are at the bottom right.';
   } catch (error) { status.textContent = `Could not start on this page: ${error.message}`; }
   finally { await updateButtons(); }
 });
