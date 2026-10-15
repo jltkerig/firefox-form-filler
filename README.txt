@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.8.1
+FIREFOX FORM FILLER - VERSION 1.8.2
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -117,6 +117,8 @@ HIDE THE PAGE BUTTONS - NEW IN 1.8.1
 A small grey - button above Review & Fill, Autofill page and Save answers to profile folds all three away so they never
 cover part of the page; it becomes a + in the corner to bring them back, and the choice is remembered. The Save these
 answers panel also has a Collapse button that shrinks it to a small pill.
+Drag the grey button to move all the buttons (the spot is remembered); the red x next to it removes them from the page
+until it is reloaded.
 
 RIGHT-CLICK MENU ON ANY PAGE - NEW IN 1.8.0
 Right-click anywhere on an HTTPS page and choose Firefox Form Filler: Open the extension menu (the toolbar panel),

@@ -10,7 +10,7 @@
       launcherObserver?.disconnect();
       document.documentElement.removeAttribute('data-jk-collapsed');
       clearTimeout(launcherRepairTimer);
-      ['jk-autofill-launcher', 'jk-autofill-now', 'jk-save-profile', 'jk-menu-toggle', 'jk-save-profile-host', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
+      ['jk-autofill-launcher', 'jk-autofill-now', 'jk-save-profile', 'jk-menu-toggle', 'jk-menu-close', 'jk-save-profile-host', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
         .forEach(id => document.getElementById(id)?.remove());
       delete globalThis.__jamieJobAutofill;
     }
@@ -22,13 +22,18 @@
       z-index:2147483646!important;padding:12px 18px!important;border:0!important;border-radius:24px!important;
       background:#194e9e!important;color:#fff!important;font:600 14px system-ui,sans-serif!important;
       box-shadow:0 4px 18px #0003!important;cursor:pointer!important;}
-    #jk-menu-toggle {position:fixed!important;right:18px!important;bottom:174px!important;z-index:2147483646!important;
+    #jk-menu-toggle, #jk-menu-close {position:fixed!important;right:18px!important;bottom:174px!important;z-index:2147483646!important;
       width:28px!important;height:28px!important;min-width:0!important;padding:0!important;margin:0!important;border:2px solid #fff!important;
       border-radius:999px!important;background:#536078!important;color:#fff!important;box-shadow:0 2px 8px #0005!important;
-      font:700 16px/22px system-ui,sans-serif!important;text-align:center!important;cursor:pointer!important;}
+      font:700 16px/1 system-ui,sans-serif!important;display:flex!important;align-items:center!important;
+      justify-content:center!important;cursor:grab!important;touch-action:none!important;}
+    #jk-menu-close {right:52px!important;cursor:pointer!important;background:#8a3b3b!important;}
+    #jk-autofill-launcher, #jk-autofill-now, #jk-save-profile, #jk-menu-toggle, #jk-menu-close {
+      transform:translate(var(--jk-dx,0px),var(--jk-dy,0px))!important;}
     html[data-jk-collapsed] #jk-autofill-launcher, html[data-jk-collapsed] #jk-autofill-now,
     html[data-jk-collapsed] #jk-save-profile {display:none!important;}
     html[data-jk-collapsed] #jk-menu-toggle {bottom:18px!important;}
+    html[data-jk-collapsed] #jk-menu-close {display:none!important;}
     #jk-field-memory-button {position:fixed!important;z-index:2147483647!important;width:28px!important;height:28px!important;
       min-width:28px!important;min-height:28px!important;padding:0!important;margin:0!important;border:2px solid #fff!important;
       border-radius:999px!important;background:#194e9e!important;color:#fff!important;box-shadow:0 2px 8px #0005!important;
@@ -2707,8 +2712,46 @@
       let saved = false;
       try { saved = localStorage.getItem('jk-menu-collapsed') === '1'; } catch {}
       show(saved);
-      fold.addEventListener('click', () => show(!document.documentElement.hasAttribute('data-jk-collapsed')));
+      // Drag the grey button to move all of the buttons; a plain click folds or unfolds them.
+      const place = (dx, dy) => {
+        const x = Math.min(0, Math.max(dx, 80 - window.innerWidth)), y = Math.min(0, Math.max(dy, 80 - window.innerHeight));
+        document.documentElement.style.setProperty('--jk-dx', `${x}px`);
+        document.documentElement.style.setProperty('--jk-dy', `${y}px`);
+        return [x, y];
+      };
+      let offset = [0, 0];
+      try { offset = JSON.parse(localStorage.getItem('jk-menu-offset') || '[0,0]'); } catch {}
+      offset = place(Number(offset[0]) || 0, Number(offset[1]) || 0);
+      let drag = null;
+      fold.addEventListener('pointerdown', event => {
+        drag = {x: event.clientX, y: event.clientY, start: offset, moved: false};
+        fold.setPointerCapture(event.pointerId);
+      });
+      fold.addEventListener('pointermove', event => {
+        if (!drag) return;
+        const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+        if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+        drag.moved = true;
+        offset = place(drag.start[0] + dx, drag.start[1] + dy);
+      });
+      fold.addEventListener('pointerup', () => {
+        if (drag?.moved) { try { localStorage.setItem('jk-menu-offset', JSON.stringify(offset)); } catch {} }
+        else if (drag) show(!document.documentElement.hasAttribute('data-jk-collapsed'));
+        drag = null;
+      });
       document.body.appendChild(fold);
+      const close = document.createElement('button');
+      close.id = 'jk-menu-close';
+      close.type = 'button';
+      close.textContent = '×';
+      close.title = 'Remove these buttons from this page (reload the page to bring them back)';
+      close.addEventListener('click', () => {
+        launcherObserver?.disconnect();
+        clearTimeout(launcherRepairTimer);
+        ['jk-autofill-launcher', 'jk-autofill-now', 'jk-save-profile', 'jk-menu-toggle', 'jk-menu-close']
+          .forEach(id => document.getElementById(id)?.remove());
+      });
+      document.body.appendChild(close);
     }
     installMemoryFieldUI();
     if (!launcherObserver) {
