@@ -113,6 +113,11 @@ The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
 
+RIGHT-CLICK MENU ON ANY PAGE - NEW IN 1.8.0
+Right-click anywhere on an HTTPS page and choose Firefox Form Filler: Open the extension menu (the toolbar panel),
+Review & Fill this page, or Save this page to my profile. On a website that is not whitelisted yet, the last two open
+the panel so it can be whitelisted. The field items (Ignore / Save this field) still appear when you right-click a field.
+
 MORE THAN ONE ANSWER PER FIELD - NEW IN 1.8.0
 A remembered field can keep several answers, with one main answer. On the profile page, each remembered field lists its
 answers: pick the round button for the main one, use Add another answer, then Save answers. On a page, the field menu has

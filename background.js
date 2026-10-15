@@ -61,6 +61,17 @@ browser.menus.create({
   documentUrlPatterns: ['https://*/*']
 }, () => void browser.runtime.lastError);
 
+// Right-click anywhere on a page: Firefox Form Filler in the menu, with the extension's panel and its two page actions.
+const PAGE_CONTEXTS = ['page', 'selection', 'link', 'image', 'frame'];
+browser.menus.create({
+  id: 'jk-parent', title: 'Firefox Form Filler', contexts: [...PAGE_CONTEXTS, 'editable'], documentUrlPatterns: ['https://*/*']
+}, () => void browser.runtime.lastError);
+for (const [id, title] of [['jk-open-panel', 'Open the extension menu'], ['jk-fill-now', 'Review & Fill this page'], ['jk-save-profile', 'Save this page to my profile']]) {
+  browser.menus.create({
+    id, parentId: 'jk-parent', title, contexts: [...PAGE_CONTEXTS, 'editable'], documentUrlPatterns: ['https://*/*']
+  }, () => void browser.runtime.lastError);
+}
+
 async function trustedFieldContext(info, tab) {
   if (!tab?.id || info.targetElementId == null || !info.pageUrl) return null;
   const url = new URL(info.pageUrl);
@@ -82,6 +93,16 @@ browser.menus.onShown.addListener((info, tab) => {
 });
 
 browser.menus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'jk-open-panel') { browser.action ? browser.action.openPopup().catch(() => {}) : browser.browserAction.openPopup().catch(() => {}); return; }
+  if (info.menuItemId === 'jk-fill-now' || info.menuItemId === 'jk-save-profile') {
+    try {
+      await browser.tabs.sendMessage(tab.id, {type: info.menuItemId === 'jk-fill-now' ? 'fill-now' : 'save-to-profile'}, {frameId: 0});
+    } catch (error) {
+      // This website isn't whitelisted yet (nothing is listening on the page): the panel is where to whitelist it.
+      (browser.action || browser.browserAction).openPopup().catch(() => {});
+    }
+    return;
+  }
   if (!['ignore-field','save-field'].includes(info.menuItemId)) return;
   try {
     const target = await trustedFieldContext(info, tab);
