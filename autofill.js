@@ -8,8 +8,9 @@
     destroy() {
       destroyed = true;
       launcherObserver?.disconnect();
+      document.documentElement.removeAttribute('data-jk-collapsed');
       clearTimeout(launcherRepairTimer);
-      ['jk-autofill-launcher', 'jk-autofill-now', 'jk-save-profile', 'jk-save-profile-host', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
+      ['jk-autofill-launcher', 'jk-autofill-now', 'jk-save-profile', 'jk-menu-toggle', 'jk-save-profile-host', 'jk-autofill-panel', 'jk-autofill-toast', 'jk-launcher-style', 'jk-panel-style', 'jk-review-host', 'jk-field-memory-button', 'jk-field-memory-menu']
         .forEach(id => document.getElementById(id)?.remove());
       delete globalThis.__jamieJobAutofill;
     }
@@ -21,6 +22,13 @@
       z-index:2147483646!important;padding:12px 18px!important;border:0!important;border-radius:24px!important;
       background:#194e9e!important;color:#fff!important;font:600 14px system-ui,sans-serif!important;
       box-shadow:0 4px 18px #0003!important;cursor:pointer!important;}
+    #jk-menu-toggle {position:fixed!important;right:18px!important;bottom:174px!important;z-index:2147483646!important;
+      width:28px!important;height:28px!important;min-width:0!important;padding:0!important;margin:0!important;border:2px solid #fff!important;
+      border-radius:999px!important;background:#536078!important;color:#fff!important;box-shadow:0 2px 8px #0005!important;
+      font:700 16px/22px system-ui,sans-serif!important;text-align:center!important;cursor:pointer!important;}
+    html[data-jk-collapsed] #jk-autofill-launcher, html[data-jk-collapsed] #jk-autofill-now,
+    html[data-jk-collapsed] #jk-save-profile {display:none!important;}
+    html[data-jk-collapsed] #jk-menu-toggle {bottom:18px!important;}
     #jk-field-memory-button {position:fixed!important;z-index:2147483647!important;width:28px!important;height:28px!important;
       min-width:28px!important;min-height:28px!important;padding:0!important;margin:0!important;border:2px solid #fff!important;
       border-radius:999px!important;background:#194e9e!important;color:#fff!important;box-shadow:0 2px 8px #0005!important;
@@ -2156,7 +2164,18 @@
       close.textContent = 'Close';
       close.className = 'secondary';
       close.onclick = () => host.remove();
-      box.append(save, close);
+      // Collapse to a small pill so the panel never covers part of the page; click the pill to open it again.
+      const pill = document.createElement('button');
+      pill.textContent = 'Save answers ▴';
+      pill.style.cssText = 'display:none;margin:0;border-radius:20px;box-shadow:0 4px 18px #0003';
+      const fold = document.createElement('button');
+      fold.textContent = 'Collapse';
+      fold.className = 'secondary';
+      const setCollapsed = collapsed => { box.style.display = collapsed ? 'none' : ''; pill.style.display = collapsed ? 'block' : 'none'; };
+      fold.onclick = () => setCollapsed(true);
+      pill.onclick = () => setCollapsed(false);
+      box.append(save, fold, close);
+      root.appendChild(pill);
       document.body.appendChild(host);
     } catch { toast('Could not read this page. Reopen the extension and try again.'); }
   }
@@ -2673,6 +2692,23 @@
         'color:#fff!important;font:600 14px system-ui,sans-serif!important;box-shadow:0 4px 18px #0003!important;cursor:pointer!important;';
       keep.addEventListener('click', () => { showSaveToProfile(); });
       document.body.appendChild(keep);
+    }
+    if (!document.getElementById('jk-menu-toggle')) {
+      // Folds the three buttons away so they never cover part of the page; remembered for next time.
+      const fold = document.createElement('button');
+      fold.id = 'jk-menu-toggle';
+      fold.type = 'button';
+      const show = collapsed => {
+        document.documentElement.toggleAttribute('data-jk-collapsed', collapsed);
+        fold.textContent = collapsed ? '+' : '–';
+        fold.title = collapsed ? 'Show the autofill buttons' : 'Hide the autofill buttons';
+        try { localStorage.setItem('jk-menu-collapsed', collapsed ? '1' : ''); } catch {}
+      };
+      let saved = false;
+      try { saved = localStorage.getItem('jk-menu-collapsed') === '1'; } catch {}
+      show(saved);
+      fold.addEventListener('click', () => show(!document.documentElement.hasAttribute('data-jk-collapsed')));
+      document.body.appendChild(fold);
     }
     installMemoryFieldUI();
     if (!launcherObserver) {

@@ -3,9 +3,9 @@
     "jamie-job-autofill@local.invalid": {
       "updates": [
         {
-          "version": "1.8.0",
-          "update_link": "https://jltkerig.github.io/firefox-form-filler/firefox-form-filler-dev-v1.8.0.xpi",
-          "update_hash": "sha256:ae0f41153a7f525bf3295d6b4a8829e24a7d45b2079a07960b83dd7339742333"
+          "version": "1.8.1",
+          "update_link": "https://jltkerig.github.io/firefox-form-filler/firefox-form-filler-dev-v1.8.1.xpi",
+          "update_hash": "sha256:31d68adec69f6a5ac507975462a0a4ec4ce8dddeab3b86397fe6be2b2a548ce9"
         }
       ]
     }

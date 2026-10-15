@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.8.0
+FIREFOX FORM FILLER - VERSION 1.8.1
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -112,6 +112,11 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+HIDE THE PAGE BUTTONS - NEW IN 1.8.1
+A small grey - button above Review & Fill, Autofill page and Save answers to profile folds all three away so they never
+cover part of the page; it becomes a + in the corner to bring them back, and the choice is remembered. The Save these
+answers panel also has a Collapse button that shrinks it to a small pill.
 
 RIGHT-CLICK MENU ON ANY PAGE - NEW IN 1.8.0
 Right-click anywhere on an HTTPS page and choose Firefox Form Filler: Open the extension menu (the toolbar panel),
