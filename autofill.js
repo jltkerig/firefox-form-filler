@@ -993,7 +993,7 @@
   let LEARNED_FIELDS = [];
   let IGNORED_FIELDS = [];
   let SITE_MAPPINGS = [];
-  const MEMORY_LIMITS = Object.freeze({records: 2000, answerLength: 20000});
+  const MEMORY_LIMITS = Object.freeze({records: 2000, answerLength: 20000, alternates: 10});
   let SETTINGS = {bitwardenCompatibilityMode: false};
   let memoryUiInstalled = false;
   let activeMemoryField = null;
@@ -1146,6 +1146,21 @@
     return score;
   }
 
+  // The answer to use from a remembered field. The main answer is used unless the field is a list or a group of choices
+  // that doesn't offer it: then the first other answer it does offer.
+  function pickLearnedAnswer(el, learned) {
+    const answers = [learned.answer, ...(Array.isArray(learned.alternates) ? learned.alternates : [])]
+      .map(value => String(value ?? '')).filter(value => value.trim());
+    let offered = null;
+    if (el instanceof HTMLSelectElement) {
+      offered = [...el.options].flatMap(option => [normalize(option.textContent || ''), normalize(option.value || '')]);
+    } else if (el.type === 'radio') {
+      offered = choiceGroup(el).flatMap(option => [normalize(getLabelText(option) || ''), normalize(option.value || '')]);
+    }
+    if (offered) return answers.find(value => offered.includes(normalize(value))) ?? answers[0];
+    return answers[0];
+  }
+
   function findLearnedField(el) {
     if (isMemoryUnsafe(el)) return null;
     let best = null;
@@ -1214,18 +1229,34 @@
     if (value.length > MEMORY_LIMITS.answerLength) { toast('This answer is too long to remember safely.'); return; }
     if (!existing && LEARNED_FIELDS.length >= MEMORY_LIMITS.records) { toast('The remembered-field limit has been reached.'); return; }
     const identity = memoryIdentity(el);
+    const others = (existing?.alternates || []).filter(other => other !== value);
+    let answer = value;
+    if (existing && mode === 'alternate') {
+      // Keep the main answer; this one joins the others.
+      if (value === existing.answer || others.length >= MEMORY_LIMITS.alternates && !others.includes(value)) {
+        toast(value === existing.answer ? 'That is already the main answer.' : 'This field already has the most answers it can keep.'); return;
+      }
+      answer = existing.answer;
+      others.push(value);
+    } else if (existing && mode === 'primary' && value !== existing.answer) {
+      // This one becomes the main answer; the old main answer is kept as another answer.
+      if (others.length >= MEMORY_LIMITS.alternates) { toast('This field already has the most answers it can keep.'); return; }
+      others.push(existing.answer);
+    }
     const record = {
       id: existing?.id || `learned-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
       ...identity,
       label: memoryDisplayLabel(el),
-      answer: value,
+      answer,
+      alternates: [...new Set(others)].filter(other => other && other !== answer),
       updatedAt: Date.now()
     };
     if (existing) LEARNED_FIELDS = LEARNED_FIELDS.map(item => item.id === existing.id ? record : item);
     else LEARNED_FIELDS.push(record);
     await persistLearnedFields();
     updateMemoryControl(el);
-    toast(mode === 'update' || existing ? 'Remembered answer updated.' : 'Field remembered.');
+    toast(mode === 'alternate' ? 'Added as another answer.' : mode === 'primary' ? 'Now the main answer.'
+      : mode === 'update' || existing ? 'Remembered answer updated.' : 'Field remembered.');
   }
 
   async function removeCurrentField() {
@@ -1263,6 +1294,8 @@
         <div class="jk-memory-title">Field memory</div>
         <button type="button" data-memory="remember">Remember this field</button>
         <button type="button" data-memory="update">Update this field</button>
+        <button type="button" data-memory="alternate">Add as another answer</button>
+        <button type="button" data-memory="primary">Make this the main answer</button>
         <button type="button" data-memory="remove">Remove this field</button>
         <button type="button" data-memory="map">Map to profile field</button>
         <button type="button" data-memory="ignore">Ignore this field</button>`);
@@ -1291,7 +1324,7 @@
     memoryButton.style.left = `${left}px`;
     memoryButton.style.top = `${top}px`;
     if (memoryMenu.style.display === 'block') {
-      const menuWidth = 210, menuHeight = 150;
+      const menuWidth = 210, menuHeight = 215;
       let menuLeft = Math.min(window.innerWidth - menuWidth - 6, left);
       let menuTop = top + size + 6;
       if (menuTop + menuHeight > window.innerHeight) menuTop = Math.max(6, top - menuHeight - 6);
@@ -1316,10 +1349,14 @@
     title.textContent = (memoryDisplayLabel(el) || 'Field').slice(0, 80);
     const remember = memoryMenu.querySelector('[data-memory="remember"]');
     const update = memoryMenu.querySelector('[data-memory="update"]');
+    const alternate = memoryMenu.querySelector('[data-memory="alternate"]');
+    const primary = memoryMenu.querySelector('[data-memory="primary"]');
     const remove = memoryMenu.querySelector('[data-memory="remove"]');
     memoryMenu.querySelector('[data-memory="ignore"]').textContent=findIgnoredField(el)?'Use this field again':'Ignore this field';
     remember.disabled = !!saved;
     update.disabled = !saved;
+    alternate.disabled = !saved;
+    primary.disabled = !saved;
     remove.disabled = !saved;
     memoryButton.style.display = 'block';
     positionMemoryControl(el);
@@ -1564,14 +1601,15 @@
     if (isGeneralVeteranQuestion(el) || /\bveteran status\b|\bprotected veteran\b/.test(eeoQuestion(el))) return veteranAnswer(el);
     const learned = findLearnedField(el);
     if (learned && learned.answer) {
-      const wanted = normalize(learned.answer);
+      const chosen = pickLearnedAnswer(el, learned);
+      const wanted = normalize(chosen);
       if (el.type === 'radio' || el.getAttribute('role') === 'radio') {
         const option = normalize(getLabelText(el) || el.textContent || el.value || '');
-        if (option === wanted || normalize(el.value || '') === wanted) return {value: String(learned.answer), learned: true,matchReason:'Exact remembered field',confidence:'High'};
+        if (option === wanted || normalize(el.value || '') === wanted) return {value: String(chosen), learned: true,matchReason:'Exact remembered field',confidence:'High'};
       } else if (el.type === 'checkbox' || el.getAttribute('role') === 'checkbox') {
-        if (['yes','true','checked','1'].includes(wanted)) return {value: String(learned.answer), learned: true,matchReason:'Exact remembered field',confidence:'High'};
+        if (['yes','true','checked','1'].includes(wanted)) return {value: String(chosen), learned: true,matchReason:'Exact remembered field',confidence:'High'};
       } else {
-        const typed=typedAnswer(el,learned.answer);
+        const typed=typedAnswer(el,chosen);
         return typed?{value:typed,learned:true,matchReason:'Exact remembered field',confidence:'High'}:null;
       }
     }

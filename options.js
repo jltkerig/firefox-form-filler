@@ -63,18 +63,37 @@ function renderLearnedFields() {
     const article=document.createElement('article'), title=document.createElement('strong'), meta=document.createElement('small');
     title.textContent=(item.label||item.question||'Unlabeled field').slice(0,240);
     meta.textContent=([item.host,item.type].filter(Boolean).join(' · ')||'No website metadata').slice(0,240);
-    const label=document.createElement('label');label.textContent='Saved answer';
-    const answer=document.createElement('input');answer.value=item.answer||'';answer.autocomplete='off';label.appendChild(answer);
-    const save=document.createElement('button');save.type='button';save.textContent='Save answer';
-    save.onclick=async()=>{const value=answer.value.trim();if(!value){status.textContent='A remembered answer cannot be blank. Remove the field instead.';return;}
-      if(value.length>20000){status.textContent='A remembered answer cannot exceed 20,000 characters.';return;}
-      const next=learnedFields.map(saved=>saved===item?{...saved,answer:value,updatedAt:Date.now()}:saved);
+    // Every answer for the field in its own row; the round button marks the main one, which is what fills the page
+    // (a list or choice that doesn't offer it gets the first other answer it does offer).
+    const answersBox=document.createElement('fieldset');const legend=document.createElement('legend');legend.textContent='Saved answers (the selected one is the main answer)';answersBox.appendChild(legend);
+    const group=`primary-${Math.random().toString(36).slice(2,8)}`, rows=[];
+    const addRow=(value,isMain)=>{
+      const row=document.createElement('div');row.className='answer-row';
+      const pick=document.createElement('input');pick.type='radio';pick.name=group;pick.checked=isMain;pick.setAttribute('aria-label','Main answer');
+      const input=document.createElement('input');input.value=value;input.autocomplete='off';input.setAttribute('aria-label','Answer');
+      const drop=document.createElement('button');drop.type='button';drop.className='secondary';drop.textContent='Remove answer';
+      const entry={pick,input};rows.push(entry);
+      drop.onclick=()=>{if(rows.length<2){status.textContent='A field keeps at least one answer. Remove the field instead.';return;}
+        rows.splice(rows.indexOf(entry),1);const wasMain=pick.checked;row.remove();if(wasMain)rows[0].pick.checked=true;};
+      row.append(pick,input,drop);answersBox.appendChild(row);};
+    addRow(item.answer||'',true);for(const other of item.alternates||[])addRow(other,false);
+    const more=document.createElement('button');more.type='button';more.className='secondary';more.textContent='Add another answer';
+    more.onclick=()=>{if(rows.length>=11){status.textContent='A field keeps at most 11 answers.';return;}addRow('',false);rows[rows.length-1].input.focus();};
+    answersBox.appendChild(more);
+    const save=document.createElement('button');save.type='button';save.textContent='Save answers';
+    save.onclick=async()=>{
+      const filled=rows.map(row=>({value:row.input.value.trim(),main:row.pick.checked})).filter(row=>row.value);
+      if(!filled.length){status.textContent='A remembered answer cannot be blank. Remove the field instead.';return;}
+      if(filled.some(row=>row.value.length>20000)){status.textContent='A remembered answer cannot exceed 20,000 characters.';return;}
+      const main=(filled.find(row=>row.main)||filled[0]).value;
+      const alternates=[...new Set(filled.map(row=>row.value).filter(value=>value!==main))];
+      const next=learnedFields.map(saved=>saved===item?{...saved,answer:main,alternates,updatedAt:Date.now()}:saved);
       try{await saveLearnedFields(next,`Updated remembered field: ${title.textContent}.`);renderLearnedFields();}catch{status.textContent='Could not update the remembered field.';}};
     const remove=document.createElement('button');remove.type='button';remove.className='danger';remove.textContent='Remove remembered field';
     remove.onclick=async()=>{const target=`${title.textContent}${item.host?` on ${item.host}`:''}`;
       if(!confirm(`Remove only the remembered field “${target}”? This does not change your main profile.`))return;
       const next=learnedFields.filter(saved=>saved!==item);try{await saveLearnedFields(next,`Removed remembered field: ${title.textContent}.`);renderLearnedFields();}catch{status.textContent='Could not remove the remembered field.';}};
-    article.append(title,meta,label,save,remove);list.appendChild(article);
+    article.append(title,meta,answersBox,save,remove);list.appendChild(article);
   }
 }
 async function saveIgnoredFields(next, message) {

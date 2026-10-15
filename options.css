@@ -2,3 +2,4 @@ body{--page:#f5f7fb;--surface:#fff;--text:#17233b;--muted:#536078;--border:#cbd5
 .danger{background:#a83232}article small{display:block;color:var(--muted);overflow-wrap:anywhere}
 html[data-theme="light"] body{color-scheme:light}
 html[data-theme="dark"] body{--page:#111827;--surface:#1f2937;--text:#f3f4f6;--muted:#cbd5e1;--border:#475569;--input:#111827;--secondary:#374151;color-scheme:dark}@media(prefers-color-scheme:dark){html:not([data-theme]) body{--page:#111827;--surface:#1f2937;--text:#f3f4f6;--muted:#cbd5e1;--border:#475569;--input:#111827;--secondary:#374151;color-scheme:dark}}
+.answer-row{display:flex;gap:8px;align-items:center;margin:6px 0}.answer-row input[type=radio]{width:auto;flex:none}.answer-row input:not([type=radio]){flex:1;min-width:0}.answer-row button{margin:0;white-space:nowrap}

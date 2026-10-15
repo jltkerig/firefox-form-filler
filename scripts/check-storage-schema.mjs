@@ -37,6 +37,15 @@ const candidate = {
 };
 const validated = context.FFF_STORAGE.validateExport(candidate);
 assert.equal(validated.learnedFields[0].answer, 'Remote');
+assert.equal(JSON.stringify(validated.learnedFields[0].alternates), '[]'); // an older backup has no other answers
+
+// More answers for one field: the main answer stays in `answer`; the others are kept without blanks or repeats.
+const several = context.FFF_STORAGE.normalizeLearnedFields([{id:'multi', question:'preferred location', answer:'Remote',
+  alternates:['Hybrid', ' Hybrid ', '', 'Remote', 'On-site'], updatedAt:1}]);
+assert.equal(several[0].answer, 'Remote');
+assert.equal(JSON.stringify(several[0].alternates), JSON.stringify(['Hybrid', 'On-site']));
+assert.throws(() => context.FFF_STORAGE.normalizeLearnedFields([{id:'x', answer:'a', alternates:'nope', updatedAt:1}]), /alternates/);
+assert.throws(() => context.FFF_STORAGE.normalizeLearnedFields([{id:'x', answer:'a', alternates:Array.from({length:11}, (_, i) => `v${i}`), updatedAt:1}]), /at most 10/);
 assert.equal(validated.ignoredFields[0].host, 'jobs.example');
 assert.equal(validated.siteMappings[0].profileKey, 'city');
 assert.equal(validated.profileVariants[0].name, 'Default');

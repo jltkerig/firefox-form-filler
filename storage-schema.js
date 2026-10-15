@@ -5,6 +5,7 @@
   const EXPORT_FORMAT = 'firefox-form-filler-private-profile';
   const MAX_LEARNED_FIELDS = 2000;
   const MAX_TEXT_LENGTH = 20000;
+  const MAX_ALTERNATES = 10;
   const SETTINGS_DEFAULTS = Object.freeze({bitwardenCompatibilityMode: false, theme: 'system'});
   const learnedKeys = ['id', 'question', 'name', 'placeholder', 'type', 'host', 'label', 'answer'];
   const ignoredKeys = ['key', 'question', 'name', 'elementId', 'placeholder', 'type', 'host', 'label'];
@@ -57,6 +58,11 @@
       const updatedAt = Number(item.updatedAt || 0);
       if (!Number.isFinite(updatedAt) || updatedAt < 0) throw new Error(`learnedFields[${index}].updatedAt is invalid.`);
       record.updatedAt = updatedAt;
+      // More answers for the same field: `answer` is the main one, these are the others (no blanks, no repeats).
+      const others = item.alternates == null ? [] : item.alternates;
+      if (!Array.isArray(others) || others.length > MAX_ALTERNATES) throw new Error(`learnedFields[${index}].alternates must be a list of at most ${MAX_ALTERNATES} answers.`);
+      record.alternates = [...new Set(others.map((value, position) => text(value ?? '', `learnedFields[${index}].alternates[${position}]`).trim())
+        .filter(value => value && value !== record.answer.trim()))];
       return record;
     });
   }

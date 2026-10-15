@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.7.0
+FIREFOX FORM FILLER - VERSION 1.8.0
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -112,6 +112,13 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+MORE THAN ONE ANSWER PER FIELD - NEW IN 1.8.0
+A remembered field can keep several answers, with one main answer. On the profile page, each remembered field lists its
+answers: pick the round button for the main one, use Add another answer, then Save answers. On a page, the field menu has
+Add as another answer (keeps the main one) and Make this the main answer (the old main answer is kept as another).
+Autofill uses the main answer; a drop-down or a group of choices that does not offer it gets the first other answer
+it does offer. Up to 10 other answers per field. Older backups load as before.
 
 WORKDAY SITES AND THREE WRONG FILLS FIXED - NEW IN 1.7.0
 Employer sites under wd5.myworkdayjobs.com are whitelisted automatically (see the section below). On a UKG
