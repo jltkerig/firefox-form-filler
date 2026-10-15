@@ -1,4 +1,4 @@
-FIREFOX FORM FILLER - VERSION 1.6.9
+FIREFOX FORM FILLER - VERSION 1.7.0
 
 SIGNED RELEASE AND AUTOMATIC UPDATES
 After the repository owner authorizes publishing a signed XPI and configures
@@ -55,6 +55,21 @@ Review & Fill button appears on that exact HTTPS hostname. Remove this
 website removes its registration and access. Expand Whitelisted websites
 to see the list. A redirect to another hostname needs separate permission.
 
+WORKDAY SITES ARE WHITELISTED AUTOMATICALLY
+Every employer site under wd5.myworkdayjobs.com (for example
+acme.wd5.myworkdayjobs.com) is whitelisted without a click: Firefox grants
+access to just those sites when the extension is installed, and the buttons
+are registered at startup. They show in Whitelisted websites as
+*.wd5.myworkdayjobs.com and have no Remove button; to turn them off, take
+away the extension's access to those sites in Firefox's add-ons page
+(Permissions). Other Workday servers (wd1, wd3 and so on) are not included.
+The list is in auto-sites.js and host_permissions in manifest.json.
+
+THREE WRONG FILLS FIXED (FOUND ON A UKG APPLICATION)
+A Secondary or Alternate phone no longer gets your one saved phone number. Generic Name, Email and Phone boxes in a
+referral block (ids such as ReferralName) no longer get your own details. A long free-text question that only mentions
+a city or state, such as "...employee at Food Bank For New York City? Please explain.", no longer gets your city.
+
 FIELD MEMORY - NEW IN 1.2.0
 Click or focus a normal form field on a whitelisted application page. A small
 round + button appears beside the field. Click it to open the field-memory menu.
@@ -97,6 +112,11 @@ hostname-specific ignore rule; right-click and uncheck it to restore the field.
 The same menu offers Save this field for remembering its current answer. Ignore
 rules store field identity only, never its entered value, and can also be
 removed under Ignored fields on the profile page.
+
+WORKDAY SITES AND THREE WRONG FILLS FIXED - NEW IN 1.7.0
+Employer sites under wd5.myworkdayjobs.com are whitelisted automatically (see the section below). On a UKG
+(UltiPro) application, a Secondary phone no longer gets your phone number, referral Name, Email and Phone boxes no
+longer get your own details, and a long question that only mentions a city no longer gets your city.
 
 START ON THIS PAGE NOW WHITELISTS - NEW IN 1.6.9
 Autofill only fills on websites you have whitelisted, so Start on this page in the menu used to put the buttons on a

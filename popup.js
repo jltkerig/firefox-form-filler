@@ -7,7 +7,7 @@ const saveToProfile = document.getElementById('save-to-profile');
 const floating = document.getElementById('floating-whitelist');
 const status = document.getElementById('status');
 document.getElementById('version').textContent = `Version ${browser.runtime.getManifest().version}`;
-let tab, pattern, id;
+let tab, pattern, id, automaticSite;
 const contentScripts = ['defaults.js', 'autofill.js'];
 const themeSelect=document.getElementById('theme');
 browser.storage.local.get('settings').then(saved=>{themeSelect.value=FFF_THEME.apply(saved.settings?.theme);});
@@ -40,10 +40,11 @@ async function updateButtons() {
   // Whitelisted = its script is registered, or access was granted for exactly this site (all-websites access, which the
   // floating Whitelist button holds, does not count as having whitelisted every site).
   const granted = pattern ? (await browser.permissions.getAll()).origins?.includes(pattern) : false;
-  disable.disabled = !pattern || (!entries.some(e => e.matches.includes(pattern)) && !granted);
+  // An automatic site (auto-sites.js) is whitelisted by the extension itself, so it has nothing to remove here.
+  const auto = automaticSite && entries.some(e => e.matches.includes(automaticSite.match));
+  disable.disabled = !pattern || auto || (!entries.some(e => e.matches.includes(pattern)) && !granted);
   floating.checked = (await browser.scripting.getRegisteredContentScripts({ids: ['jk-launcher']})).length > 0;
-  fillNow.disabled = disable.disabled;  // the page can only be filled once the website is whitelisted
-  saveToProfile.disabled = disable.disabled;
+  fillNow.disabled = saveToProfile.disabled = disable.disabled && !auto;  // the page can only be filled once the website is whitelisted
 }
 floating.addEventListener('change', async () => {
   const turningOn = floating.checked;
@@ -104,6 +105,7 @@ async function initialize() {
   }
   pattern = `https://${url.hostname}/*`;
   id = `jamie-${url.hostname}`;
+  automaticSite = fffAutoSiteFor(url.hostname);
   document.getElementById('site').textContent = url.hostname;
   saveExample.disabled = false;
   await updateButtons();
@@ -122,7 +124,8 @@ async function initialize() {
     } catch (error) { status.textContent = `Could not finish enabling this website: ${error.message}`; return; }
     await updateButtons();
   }
-  status.textContent = disable.disabled ? 'Autofill is not enabled for this website.'
+  status.textContent = fillNow.disabled ? 'Autofill is not enabled for this website.'
+    : disable.disabled ? 'Autofill is enabled for this website automatically.'
     : repaired ? 'Autofill is enabled for this website. The buttons should now be on the page.'
     : 'Autofill is enabled for this website.';
 }

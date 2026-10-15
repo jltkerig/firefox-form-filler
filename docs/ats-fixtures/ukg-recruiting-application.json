@@ -1,0 +1,1906 @@
+{
+  "format": "firefox-form-filler-ats-fixture",
+  "schemaVersion": 1,
+  "source": "sanitized-page-report",
+  "hostname": "ukg-recruiting-application.example",
+  "fields": [
+    {
+      "fieldType": "file",
+      "label": "Upload Resume DOC, DOCX, or PDF (Max file size 6MB).",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Choose a file that you have already uploaded.",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Title",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "honorific-prefix"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "First Name",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "session-guid-ukg-no-autocomplete-given-name"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Preferred Name",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Middle",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "session-guid-ukg-no-autocomplete-additional-name"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Last Name",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "session-guid-ukg-no-autocomplete-family-name"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Suffix",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "honorific-suffix"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Former Name",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "off"
+      }
+    },
+    {
+      "fieldType": "tel",
+      "label": "Primary Phone",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "tel"
+      }
+    },
+    {
+      "fieldType": "tel",
+      "label": "Secondary Phone",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "tel"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Country",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "country-name"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Address 1",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "address-line1"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Address 2",
+      "reason": "Captured for regression review",
+      "aria": {
+        "autocomplete": "address-line2"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "City",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "address-level2"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "State / Province",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "address-level1"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Zip / Postal Code",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "postal-code"
+      }
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Willing to relocate",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Job Title",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Company / Organization",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Location",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Month",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Year (YYYY)",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "To month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "To year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Description",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Job Title",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Company / Organization",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Location",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Month",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Year (YYYY)",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "To month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "To year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Description",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Job Title",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Company / Organization",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Location",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Month",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Year (YYYY)",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "To month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "To year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Description",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Job Title",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Company / Organization",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Location",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Month",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Year (YYYY)",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "To month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "To year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Description",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "School Name",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "off"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Level of Education / Degree",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "off"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Major",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Minor",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "From month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "From year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "To month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "To year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Description",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "School Name",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "off"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Level of Education / Degree",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "off"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Major",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Minor",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "From month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "From year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "To month",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "To year",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Description",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Skills",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "off"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Skill level",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Skills",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true",
+        "autocomplete": "off"
+      }
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Behaviors What is your work style?",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Motivations What gets you out of bed in the morning?",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "file",
+      "label": "Upload a file DOC, DOCX, PDF, JPG or PNG (Max file size 6MB).",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Day0",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Day1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Day2",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Day3",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Day4",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Day5",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Day6",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 12am to 1am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 1am to 2am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 2am to 3am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 3am to 4am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 4am to 5am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 5am to 6am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 6am to 7am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 7am to 8am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 8am to 9am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 9am to 10am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 10am to 11am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 11am to 12pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 12pm to 1pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 1pm to 2pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 2pm to 3pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 3pm to 4pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 4pm to 5pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 5pm to 6pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 6pm to 7pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 7pm to 8pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 8pm to 9pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 9pm to 10pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 10pm to 11pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Sunday 11pm to 12am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 12am to 1am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 1am to 2am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 2am to 3am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 3am to 4am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 4am to 5am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 5am to 6am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 6am to 7am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 7am to 8am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 8am to 9am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 9am to 10am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 10am to 11am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 11am to 12pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 12pm to 1pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 1pm to 2pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 2pm to 3pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 3pm to 4pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 4pm to 5pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 5pm to 6pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 6pm to 7pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 7pm to 8pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 8pm to 9pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 9pm to 10pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 10pm to 11pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Monday 11pm to 12am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 12am to 1am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 1am to 2am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 2am to 3am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 3am to 4am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 4am to 5am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 5am to 6am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 6am to 7am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 7am to 8am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 8am to 9am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 9am to 10am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 10am to 11am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 11am to 12pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 12pm to 1pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 1pm to 2pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 2pm to 3pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 3pm to 4pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 4pm to 5pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 5pm to 6pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 6pm to 7pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 7pm to 8pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 8pm to 9pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 9pm to 10pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 10pm to 11pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Tuesday 11pm to 12am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 12am to 1am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 1am to 2am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 2am to 3am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 3am to 4am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 4am to 5am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 5am to 6am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 6am to 7am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 7am to 8am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 8am to 9am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 9am to 10am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 10am to 11am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 11am to 12pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 12pm to 1pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 1pm to 2pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 2pm to 3pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 3pm to 4pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 4pm to 5pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 5pm to 6pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 6pm to 7pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 7pm to 8pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 8pm to 9pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 9pm to 10pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 10pm to 11pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Wednesday 11pm to 12am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 12am to 1am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 1am to 2am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 2am to 3am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 3am to 4am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 4am to 5am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 5am to 6am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 6am to 7am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 7am to 8am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 8am to 9am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 9am to 10am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 10am to 11am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 11am to 12pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 12pm to 1pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 1pm to 2pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 2pm to 3pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 3pm to 4pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 4pm to 5pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 5pm to 6pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 6pm to 7pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 7pm to 8pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 8pm to 9pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 9pm to 10pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 10pm to 11pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Thursday 11pm to 12am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 12am to 1am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 1am to 2am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 2am to 3am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 3am to 4am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 4am to 5am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 5am to 6am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 6am to 7am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 7am to 8am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 8am to 9am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 9am to 10am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 10am to 11am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 11am to 12pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 12pm to 1pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 1pm to 2pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 2pm to 3pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 3pm to 4pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 4pm to 5pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 5pm to 6pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 6pm to 7pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 7pm to 8pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 8pm to 9pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 9pm to 10pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 10pm to 11pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Friday 11pm to 12am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 12am to 1am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 1am to 2am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 2am to 3am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 3am to 4am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 4am to 5am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 5am to 6am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 6am to 7am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 7am to 8am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 8am to 9am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 9am to 10am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 10am to 11am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 11am to 12pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 12pm to 1pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 1pm to 2pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 2pm to 3pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 3pm to 4pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 4pm to 5pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 5pm to 6pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 6pm to 7pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 7pm to 8pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 8pm to 9pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 9pm to 10pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 10pm to 11pm",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "checkbox",
+      "label": "Saturday 11pm to 12am",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Sunday Start Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Sunday End Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Monday Start Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Monday End Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Tuesday Start Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Tuesday End Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Wednesday Start Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Wednesday End Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Thursday Start Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Thursday End Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Friday Start Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Friday End Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Saturday Start Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "Saturday End Time 1",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Notes",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "select-one",
+      "label": "How did you hear about this opportunity?",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "radio",
+      "label": "Yes",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Name",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "Email",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "text",
+      "label": "Phone",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "radio",
+      "label": "No",
+      "reason": "Captured for regression review",
+      "aria": {}
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Have you ever interned, temped, or been a full time employee at Food Bank For New York City? Please explain.",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "radio",
+      "label": "unlabeled field",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "textarea",
+      "label": "unlabeled field",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "text",
+      "label": "unlabeled field",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    },
+    {
+      "fieldType": "textarea",
+      "label": "Will you now or in the future require sponsorship for employment visa status?",
+      "reason": "Captured for regression review",
+      "aria": {
+        "aria-required": "true"
+      }
+    }
+  ]
+}

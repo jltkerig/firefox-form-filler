@@ -496,7 +496,8 @@
         /reference/,
         /manager/,
         /supervisor/,
-        /fax/
+        /fax/,
+        /\b(?:secondary|alternate|alternative|second)\b/  // the profile holds one phone number
       ]
     ],
 
@@ -1526,6 +1527,18 @@
     }
     return {value: String(saved).trim()};
   }
+  // The profile rule for a field's label, or undefined. Two cases the label rules alone get wrong: generic Name / Email /
+  // Phone boxes in a referral block (ids such as ReferralName) describe the person who referred you, and a long
+  // free-text question that merely mentions "city" or "state" is not asking for that answer.
+  function matchRule(el, direct) {
+    const rule = RULES.find(([, patterns, excludes = [], textareaOnly = false]) =>
+      (!textareaOnly || el instanceof HTMLTextAreaElement) && !excludes.some(rx => rx.test(direct)) && patterns.some(rx => rx.test(direct)));
+    if (!rule) return undefined;
+    if (!rule[3] && el instanceof HTMLTextAreaElement && direct.split(' ').length > 10) return undefined;
+    const idHint = normalize(`${el.id} ${el.getAttribute('name') || ''}`.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' '));
+    if (/\b(?:referral|referrer)\b/.test(idHint) && /\b(?:name|e ?mail|phone|telephone)\b/.test(direct)) return undefined;
+    return rule;
+  }
   function answerFor(el) {
     const direct = directLabel(el);
     const desc = contextLabel(el);
@@ -1586,8 +1599,7 @@
     if (phonePart) return {value: phonePart};
     // Match the question itself, not the option names in its dropdown.
     const yesNo = YES_NO_RULES.find(([, patterns]) => patterns.some(rx => rx.test(direct)));
-    const rule = yesNo || RULES.find(([, patterns, excludes = [], textareaOnly = false]) =>
-      (!textareaOnly || el instanceof HTMLTextAreaElement) && !excludes.some(rx => rx.test(direct)) && patterns.some(rx => rx.test(direct)));
+    const rule = yesNo || matchRule(el, direct);
     const value = rule?.[0]();
     if (rule?.[0] === phoneValue) {
       const formatted = phoneAnswer(el);
@@ -2002,8 +2014,7 @@
   function profileTarget(el) {
     const direct = directLabel(el);
     if (!direct || isRecordDetailsPage() || isConsentQuestion(el) || isSensitive(direct) || isChoice(el)) return null;
-    const rule = RULES.find(([, patterns, excludes = [], textareaOnly = false]) =>
-      (!textareaOnly || el instanceof HTMLTextAreaElement) && !excludes.some(rx => rx.test(direct)) && patterns.some(rx => rx.test(direct)));
+    const rule = matchRule(el, direct);
     if (!rule) return null;
     if (rule[0] === phoneValue) return {section: 'profile', key: 'phone'};
     const source = /^\(\)\s*=>\s*(PROFILE|OPTIONAL)\.([A-Za-z0-9]+)\s*$/.exec(Function.prototype.toString.call(rule[0]).trim());

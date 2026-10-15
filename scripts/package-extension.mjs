@@ -9,6 +9,7 @@ const output = new URL('../.build/extension/', import.meta.url);
 const files = [
   'manifest.json',
   'storage-schema.js',
+  'auto-sites.js',
   'theme.js',
   'background.js',
   'autofill.js',

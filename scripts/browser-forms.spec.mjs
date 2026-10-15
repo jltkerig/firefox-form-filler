@@ -150,6 +150,33 @@ test('fills recognized fields, preserves existing values, and skips credentials'
   await expect(page.locator('[name="password"]')).toHaveValue('');
 });
 
+// From a UKG (UltiPro) application: a referral block with generic Name / Email / Phone labels, a second phone, and a free-text
+// question that mentions a city. None of them is the applicant's own name, email, only phone, or city.
+test('referral details, a second phone, and a long question that mentions a city are left for you', async ({page}) => {
+  await page.setContent(`<form>
+    <label for="FirstName">First Name</label><input id="FirstName">
+    <label for="Phone">Primary Phone</label><input id="Phone" type="tel">
+    <label for="SecondaryPhone">Secondary Phone</label><input id="SecondaryPhone" type="tel">
+    <label for="City">City</label><input id="City">
+    <label for="ReferralName">Name</label><input id="ReferralName">
+    <label for="ReferralEmail">Email</label><input id="ReferralEmail">
+    <label for="ReferralPhone">Phone</label><input id="ReferralPhone" type="tel">
+    <label for="Explain">Have you ever interned, temped, or been a full time employee at Food Bank For New York City? Please explain.</label>
+    <textarea id="Explain"></textarea>
+    <label for="Email">Email</label><input id="Email">
+  </form>`);
+  await injectAutofill(page);
+  const panel=await review(page);
+  await expect(panel.locator('input[type="checkbox"]')).toHaveCount(4);  // first name, phone, city, email
+  await panel.locator('#apply').click();
+  await expect(page.locator('#Phone')).toHaveValue('2025550147');
+  await expect(page.locator('#City')).toHaveValue('Example City');
+  await expect(page.locator('#Email')).toHaveValue('autofill@example.invalid');
+  for (const id of ['SecondaryPhone','ReferralName','ReferralEmail','ReferralPhone','Explain']) {
+    await expect(page.locator(`#${id}`)).toHaveValue('');
+  }
+});
+
 test('a phone extension field does not get the phone number', async ({page}) => {
   await page.setContent(`<form>
     <label>Phone <input type="tel" name="phone"></label>

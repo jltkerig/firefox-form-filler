@@ -22,13 +22,28 @@ assertBlank(defaultsContext.JAMIE_DEFAULTS);
 assert.deepEqual([...manifest.permissions].sort(), ['activeTab', 'menus', 'scripting', 'storage']);
 assert.deepEqual(manifest.optional_permissions, ['downloads']);
 assert.deepEqual(manifest.optional_host_permissions, ['https://*/*']);
+// The only sites with access from install are the automatic ones, and the list in auto-sites.js must match them.
+const autoContext = {};
+runInNewContext(`${read('auto-sites.js')}\nthis.FFF_AUTO_SITES = FFF_AUTO_SITES; this.fffAutoSiteFor = fffAutoSiteFor;`, autoContext);
+assert.deepEqual(manifest.host_permissions, ['https://*.wd5.myworkdayjobs.com/*']);
+assert.deepEqual([...autoContext.FFF_AUTO_SITES.map(site => site.match)].sort(), [...manifest.host_permissions].sort(),
+  'automatic sites must match host_permissions exactly');
+assert.ok(manifest.background.scripts.includes('auto-sites.js') && manifest.background.scripts.indexOf('auto-sites.js') < manifest.background.scripts.indexOf('background.js'),
+  'auto-sites.js must load before background.js');
+assert.match(read('popup.html'), /<script src="auto-sites\.js"><\/script><script src="popup\.js">/, 'the popup must load auto-sites.js');
+for (const host of ['acme.wd5.myworkdayjobs.com', 'a.b.wd5.myworkdayjobs.com', 'wd5.myworkdayjobs.com', 'ACME.WD5.MYWORKDAYJOBS.COM']) {
+  assert.ok(autoContext.fffAutoSiteFor(host), `${host} must be an automatic site`);
+}
+for (const host of ['acme.wd1.myworkdayjobs.com', 'myworkdayjobs.com', 'evilwd5.myworkdayjobs.com', 'wd5.myworkdayjobs.com.evil.example', '', undefined]) {
+  assert.equal(autoContext.fffAutoSiteFor(host), undefined, `${host} must not be an automatic site`);
+}
 assert.match(read('README.txt'), new RegExp(`^FIREFOX FORM FILLER - VERSION ${manifest.version.replaceAll('.', '\\.')}`, 'm'),
   'README and manifest versions must match');
 assert.equal(packageJson.version, manifest.version, 'package and manifest versions must match');
 
 assert.doesNotMatch(read('launcher.js'), /\.value\b|innerText|storage|jamieProfile|PROFILE|OPTIONAL|answerFor|fetch\s*\(/,
   'the floating Whitelist button script must not read answers, page text, or storage, or use the network');
-for (const name of ['autofill.js', 'background.js', 'launcher.js', 'options.js', 'popup.js', 'storage-schema.js']) {
+for (const name of ['auto-sites.js', 'autofill.js', 'background.js', 'launcher.js', 'options.js', 'popup.js', 'storage-schema.js']) {
   const source = read(name);
   assert.doesNotMatch(source, /browser\.storage\.sync|chrome\.storage\.sync/,
     `${name} must keep answers in Firefox local storage`);

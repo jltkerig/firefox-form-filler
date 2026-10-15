@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Firefox Form Filler",
-  "version": "1.6.9",
+  "version": "1.7.0",
   "description": "Enable trusted application sites, autofill forms, and learn custom fields from a floating field-side control.",
   "permissions": [
     "activeTab",
@@ -12,12 +12,16 @@
   "optional_permissions": [
     "downloads"
   ],
+  "host_permissions": [
+    "https://*.wd5.myworkdayjobs.com/*"
+  ],
   "optional_host_permissions": [
     "https://*/*"
   ],
   "background": {
     "scripts": [
       "defaults.js",
+      "auto-sites.js",
       "storage-schema.js",
       "background.js"
     ]

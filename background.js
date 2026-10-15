@@ -3,11 +3,12 @@ browser.runtime.onMessage.addListener((message, sender, respond) => {
   let url;
   try { url = new URL(sender.url); } catch { respond(false); return; }
   if (url.protocol !== 'https:') { respond(false); return; }
-  const pattern = `https://${url.hostname}/*`;
+  const pattern = `https://${url.hostname}/*`, auto = fffAutoSiteFor(url.hostname)?.match;
   // Allowed only where this website was whitelisted (its content script is registered), even when the broader
-  // all-websites access of the floating Whitelist button is held.
+  // all-websites access of the floating Whitelist button is held. Automatic sites (auto-sites.js) count too.
   Promise.all([browser.permissions.contains({origins: [pattern]}), browser.scripting.getRegisteredContentScripts()])
-    .then(([granted, entries]) => respond(granted && entries.some(entry => entry.id.startsWith('jamie-') && entry.matches.includes(pattern))),
+    .then(([granted, entries]) => respond(granted && entries.some(entry => entry.id.startsWith('jamie-') &&
+      (entry.matches.includes(pattern) || (auto && entry.matches.includes(auto))))),
       () => respond(false));
   return true;
 });
@@ -123,8 +124,26 @@ async function restoreRegisteredScripts() {
   }
 }
 
+// The automatic sites (auto-sites.js) are whitelisted by Firefox granting their access at install, so the script is
+// registered here without any click, and put into tabs already open on them. Where access was taken away in Firefox's
+// extensions panel nothing is registered, and the registration is dropped again by reconcileRemovedOrigins.
+async function registerAutoSites() {
+  const known = new Set((await browser.scripting.getRegisteredContentScripts()).map(entry => entry.id));
+  const files = ['defaults.js', 'autofill.js'];
+  for (const site of FFF_AUTO_SITES) {
+    if (known.has(site.id) || !(await browser.permissions.contains({origins: [site.match]}))) continue;
+    await browser.scripting.registerContentScripts([{
+      id: site.id, matches: [site.match], js: files, runAt: 'document_idle', persistAcrossSessions: true
+    }]).catch(() => {});
+    for (const tab of await browser.tabs.query({url: site.match})) {
+      await browser.scripting.executeScript({target: {tabId: tab.id}, files}).catch(() => {});
+    }
+  }
+}
+
 async function refreshRegisteredScripts() {
   await restoreRegisteredScripts().catch(error => console.error('Could not restore whitelisted sites:', error));
+  await registerAutoSites().catch(error => console.error('Could not set up the automatic sites:', error));
   const wanted = ['defaults.js', 'autofill.js'];
   const entries = (await browser.scripting.getRegisteredContentScripts()).filter(entry => entry.id.startsWith('jamie-'));
   for (const entry of entries) {
@@ -179,7 +198,7 @@ async function registerGrantedSites(permissions) {
 }
 
 browser.permissions.onAdded.addListener(permissions => {
-  initializing = initializing.then(() => registerGrantedSites(permissions), () => {})
+  initializing = initializing.then(() => Promise.all([registerGrantedSites(permissions), registerAutoSites()]), () => {})
     .catch(error => console.error('Could not set up a newly allowed site:', error));
 });
 
