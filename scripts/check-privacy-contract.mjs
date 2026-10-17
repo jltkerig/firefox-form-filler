@@ -56,7 +56,15 @@ for (const name of ['auto-sites.js', 'autofill.js', 'background.js', 'launcher.j
     assert.doesNotMatch(match[1], /\$\{/,
       `${name} innerHTML templates must not interpolate page or profile data`);
   }
-  const withoutLiteralHtml = source.replace(/\.innerHTML\s*=\s*`[\s\S]*?`/g, '');
+  // setStaticHtml() in autofill.js is the one helper allowed to assign innerHTML from a variable. It exists so the
+  // extension's own markup works on pages that require Trusted Types, and every caller must pass a fixed template.
+  const helperAssignments = /\bel\.innerHTML\s*=\s*(?:html|htmlPolicy\.createHTML\(html\))\s*;/g;
+  for (const call of source.matchAll(/\bsetStaticHtml\(\s*\w+\s*,\s*`([\s\S]*?)`/g)) {
+    assert.doesNotMatch(call[1], /\$\{/,
+      `${name} setStaticHtml templates must not interpolate page or profile data`);
+  }
+  const withoutLiteralHtml = source.replace(/\.innerHTML\s*=\s*`[\s\S]*?`/g, '')
+    .replace(name === 'autofill.js' ? helperAssignments : /(?!)/g, '');
   assert.doesNotMatch(withoutLiteralHtml, /\.innerHTML\s*=/,
     `${name} innerHTML assignments must be fixed literal templates`);
 }
@@ -135,7 +143,7 @@ assert.doesNotMatch(options, /storage\.local\.(?:clear|remove)\(/,
   'remembered-field management must not clear unrelated local storage');
 assert.match(options, /learnedFields\.filter\(saved=>saved!==item\)/,
   'remembered-field removal must target only the selected in-memory record');
-assert.match(autofill, /MEMORY_LIMITS = Object\.freeze\(\{records: 2000, answerLength: 20000\}\)/,
+assert.match(autofill, /MEMORY_LIMITS = Object\.freeze\(\{records: 2000, answerLength: 20000, alternates: 10\}\)/,
   'field memory must stay within the validated storage limits');
 
 console.log('Privacy contract checks passed (static source checks; live Firefox behavior still needs testing).');
